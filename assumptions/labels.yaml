@@ -1,0 +1,348 @@
+# Display metadata for the assumptions layer: the label and unit each
+# parameter carried in the workbook"s "Control & Parameters" sheet.
+#
+# Kept separate from the scenario files on purpose. base.yaml is the layer a
+# non-coder edits, and it stays readable by holding values and nothing else.
+# This file is documentation, not input -- nothing here changes a result.
+# `row` is the source row in Control & Parameters, for tracing back.
+# `derived: true` marks a value the model computes rather than reads. Those
+# appear here (readers want to see them) but not in base.yaml (nobody should
+# edit them directly).
+
+
+macro_indexation:
+  _title: "Macro & Indexation"
+  cpi_general:
+    label: "General CPI inflation"
+    unit: "% p.a."
+    row: 8
+  rent_inflation:
+    label: "Rent inflation"
+    unit: "% p.a."
+    row: 9
+  hpi_premium:
+    label: "HPI premium over CPI"
+    unit: "% p.a."
+    row: 10
+  base_calendar_year:
+    label: "Base calendar year (Year 1)"
+    unit: "year"
+    row: 11
+
+tontine_fund:
+  _title: "Tontine Fund — Closed-End Lifetime Annuity Mutual"
+  pf_index_label:
+    label: "Indexation basis (principal and coupon)"
+    unit: "text"
+    row: 13
+  pf_investor_rate:
+    label: "Target investor annuity rate — spread over index"
+    unit: "% p.a."
+    row: 14
+  pf_fund_op_margin:
+    label: "Fund operating cost margin"
+    unit: "% p.a."
+    row: 15
+  pf_fund_reg_charge:
+    label: "Fund regulatory capital charge"
+    unit: "% p.a."
+    row: 16
+  pf_coupon_spread:
+    label: "Implied SLC coupon — spread over index (derived)"
+    unit: "% p.a."
+    row: 17
+    # Not an input: the model derives this as investor rate + fund operating
+    # margin + regulatory capital charge, as the workbook does with
+    # =SUM(E14:E16). Shown to readers, but edited via its three components.
+    derived: true
+  pf_max_raise:
+    label: "Tontine maximum raise"
+    unit: "£"
+    row: 18
+  pf_invest_phase_yrs:
+    label: "Investment phase duration"
+    unit: "years"
+    row: 19
+  pf_release_start_yr:
+    label: "Release phase start year"
+    unit: "model year"
+    row: 20
+  pf_release_rate:
+    label: "Annual release rate"
+    unit: "% of outstanding balance p.a."
+    row: 21
+  pf_ltv_limit:
+    label: "LTV limit"
+    unit: "% of portfolio value"
+    row: 22
+  pf_refi_toggle:
+    label: "Refinance into commercial mortgage? (1 = Yes)"
+    unit: "1 / 0"
+    row: 23
+  pf_refi_year:
+    label: "Refinancing year"
+    unit: "model year"
+    row: 24
+  pf_refi_rate:
+    label: "Commercial mortgage rate"
+    unit: "% p.a."
+    row: 25
+  pf_refi_amort_yrs:
+    label: "Commercial mortgage amortisation"
+    unit: "years"
+    row: 26
+
+community_shares:
+  _title: "Community Shares (Junior Debt)"
+  cs_dividend_rate:
+    label: "Default dividend rate (override per year on Capital & Debt)"
+    unit: "% p.a."
+    row: 28
+  cs_max_pct_capital:
+    label: "Maximum issuance cap"
+    unit: "% of total capital"
+    row: 29
+  cs_withdrawal_years:
+    label: "Withdrawal restriction period"
+    unit: "years"
+    row: 30
+  cs_issue_cost_pct:
+    label: "Issuance / marketing cost"
+    unit: "% of proceeds"
+    row: 31
+  cs_baseline_issue:
+    label: "Baseline annual issuance (real)"
+    unit: "£ p.a."
+    row: 32
+  cs_takeup_mult:
+    label: "Take-up multiplier"
+    unit: "x"
+    row: 33
+  cs_withdrawal_rate:
+    label: "Annual withdrawal rate on eligible shares"
+    unit: "% p.a."
+    row: 34
+
+bequests_gifts:
+  _title: "Bequests & Gifts"
+  gift_baseline:
+    label: "Cash gifts from living donors (Gift Aid eligible)"
+    unit: "£ p.a."
+    row: 36
+  beq_baseline:
+    label: "Bequests from estates (not Gift Aid eligible)"
+    unit: "£ p.a."
+    row: 37
+  founding_capital:
+    label: "Founding capital injection (Year 1 only)"
+    unit: "£"
+    row: 38
+  beq_growth_mult:
+    label: "Real growth multiplier"
+    unit: "% p.a."
+    row: 39
+
+rent_yield:
+  _title: "Rent & Yield"
+  gross_yield:
+    label: "Gross rental yield"
+    unit: "% of purchase price"
+    row: 41
+  lc_share:
+    label: "Land Commons share of gross rent"
+    unit: "%"
+    row: 42
+  void_rate:
+    label: "Void rate"
+    unit: "%"
+    row: 43
+
+acquisition:
+  _title: "Acquisition"
+  avg_price:
+    label: "Average property price (real, Year 1)"
+    unit: "£"
+    row: 45
+  sdlt_rate:
+    label: "SDLT rate (charitable relief)"
+    unit: "% of price"
+    row: 46
+  conveyancing:
+    label: "Conveyancing per property (real)"
+    unit: "£"
+    row: 47
+  survey_cost:
+    label: "Survey per property (real)"
+    unit: "£"
+    row: 48
+  retrofit_cost:
+    label: "Initial retrofit per property (real)"
+    unit: "£"
+    row: 49
+
+admin_costs_early:
+  _title: "Admin Costs — Early Years (real)"
+  board_early:
+    label: "Board remuneration"
+    unit: "£ p.a."
+    row: 51
+  acct_early:
+    label: "Accounting & audit"
+    unit: "£ p.a."
+    row: 52
+  fca_early:
+    label: "FCA & annual reporting"
+    unit: "£ p.a."
+    row: 53
+  ins_early:
+    label: "Insurance"
+    unit: "£ p.a."
+    row: 54
+
+admin_costs_target:
+  _title: "Admin Costs — Target (real)"
+  board_target:
+    label: "Board remuneration"
+    unit: "£ p.a."
+    row: 56
+  acct_target:
+    label: "Accounting & audit"
+    unit: "£ p.a."
+    row: 57
+  fca_target:
+    label: "FCA & annual reporting"
+    unit: "£ p.a."
+    row: 58
+  ins_target:
+    label: "Insurance"
+    unit: "£ p.a."
+    row: 59
+  admin_per_prop:
+    label: "Variable admin per property"
+    unit: "£ / property / yr"
+    row: 60
+
+reserves:
+  _title: "Reserves"
+  reserve_tgt_months:
+    label: "Target reserve"
+    unit: "months of debt service"
+    row: 62
+  reserve_min_months:
+    label: "Minimum covenant"
+    unit: "months of debt service"
+    row: 63
+  reserve_build_year:
+    label: "Target reserve fully built by"
+    unit: "model year"
+    row: 64
+  min_cash_buffer:
+    label: "Minimum operating cash buffer"
+    unit: "£"
+    row: 65
+
+growth_curve:
+  _title: "Growth Curve"
+  acq_year1:
+    label: "Properties acquired — Year 1"
+    unit: "properties"
+    row: 67
+  acq_year2:
+    label: "Properties acquired — Year 2"
+    unit: "properties"
+    row: 68
+  acq_year3:
+    label: "Properties acquired — Year 3"
+    unit: "properties"
+    row: 69
+  logistic_start_yr:
+    label: "Logistic growth begins"
+    unit: "model year"
+    row: 70
+  logistic_floor:
+    label: "Logistic floor (min acquisitions p.a.)"
+    unit: "properties"
+    row: 71
+  logistic_ceiling:
+    label: "Logistic ceiling (max portfolio)"
+    unit: "properties"
+    row: 72
+  logistic_dbl_yrs:
+    label: "Doubling rate"
+    unit: "years"
+    row: 73
+
+capex_maintenance:
+  _title: "Capex & Maintenance"
+  sinking_per_prop:
+    label: "Sinking fund contribution"
+    unit: "£ / property / yr"
+    row: 75
+  maint_per_prop:
+    label: "Structural maintenance spend"
+    unit: "£ / property / yr"
+    row: 76
+  sinking_return:
+    label: "Sinking fund investment return"
+    unit: "% p.a."
+    row: 77
+
+market_shock:
+  _title: "Market Shock Overrides"
+  hpi_shock_year:
+    label: "One-off HPI shock year (0 = none)"
+    unit: "model year"
+    row: 79
+  hpi_shock_pct:
+    label: "One-off HPI shock"
+    unit: "%"
+    row: 80
+  rent_shock_years:
+    label: "Rent shock duration following HPI shock"
+    unit: "years"
+    row: 81
+  rent_shock_rate:
+    label: "Rent inflation during shock"
+    unit: "% p.a."
+    row: 82
+
+tax_gift_aid:
+  _title: "Tax & Gift Aid"
+  ct_exempt_toggle:
+    label: "Corporation tax exempt? (1 = Yes)"
+    unit: "1 / 0"
+    row: 84
+  ct_rate:
+    label: "Corporation tax rate (if not exempt)"
+    unit: "%"
+    row: 85
+  gift_aid_toggle:
+    label: "Gift Aid applicable? (1 = Yes)"
+    unit: "1 / 0"
+    row: 86
+  gift_aid_rate:
+    label: "Gift Aid recovery rate"
+    unit: "% of qualifying gifts"
+    row: 87
+
+funding_discipline:
+  _title: "Acquisition Funding Discipline"
+  constrain_growth:
+    label: "Cap acquisitions at affordable level? (1 = Yes)"
+    unit: "1 / 0"
+    row: 89
+
+monthly_timing:
+  _title: "Monthly Cash Flow Timing (Years 1–5)"
+  acq_month:
+    label: "Month in year when acquisitions complete"
+    unit: "month (1–12)"
+    row: 91
+  debt_pay_freq:
+    label: "Debt service payments per year"
+    unit: "payments p.a."
+    row: 92
+  div_month:
+    label: "Month in year when dividends are paid"
+    unit: "month (1–12)"
+    row: 93

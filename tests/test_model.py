@@ -53,6 +53,44 @@ def test_coupon_spread_is_derived_not_stored():
     assert a.pf_coupon_spread == pytest.approx(0.0375)
 
 
+def test_labels_cover_every_parameter():
+    """
+    labels.yaml and base.yaml must describe the same parameter set.
+
+    They are separate files so base.yaml stays clean for a non-coder to edit,
+    but that split means a parameter added to one and not the other would
+    silently vanish from the explorer's assumptions panel and the Excel
+    workbook. This is the check that stops that.
+    """
+    import yaml
+
+    with open(os.path.join(ROOT, "assumptions", "base.yaml"), encoding="utf-8") as f:
+        base = yaml.safe_load(f)
+    with open(os.path.join(ROOT, "assumptions", "labels.yaml"), encoding="utf-8") as f:
+        labels = yaml.safe_load(f)
+
+    assert set(base) == set(labels), (
+        f"section mismatch — only in base: {set(base) - set(labels)}; "
+        f"only in labels: {set(labels) - set(base)}"
+    )
+    a = load("base")
+    for section in base:
+        base_keys = set(base[section])
+        labelled = {k: v for k, v in labels[section].items() if k != "_title"}
+        # A derived value is described here but is not an input, so it is
+        # expected to be absent from base.yaml -- and must exist on the loaded
+        # assumptions, or the panel would show a blank.
+        derived = {k for k, v in labelled.items() if v.get("derived")}
+        for key in derived:
+            assert key in a.values, f"{key} is marked derived but the model never computes it"
+        assert base_keys == set(labelled) - derived, (
+            f"section {section!r}: only in base: {base_keys - set(labelled)}; "
+            f"only in labels: {set(labelled) - derived - base_keys}"
+        )
+        for key, meta in labelled.items():
+            assert meta.get("label"), f"{key} has no label"
+
+
 def test_scenario_cannot_invent_parameters():
     """A typo'd key in a scenario file is an error, not a silently ignored line."""
     import tempfile

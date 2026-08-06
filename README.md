@@ -42,6 +42,34 @@ Run the tests:
 python -m pytest tests/ -q
 ```
 
+## The explorer
+
+`explorer/index.html` plus the generated `explorer/data.json` — a single static
+page, no server and no build step, deployable to GitHub Pages.
+
+View it locally (the browser blocks reading `data.json` from `file://`, so it
+needs to be served):
+
+```bash
+python -m http.server 8000
+```
+
+then open `http://localhost:8000/explorer/`.
+
+It has three parts: an **assumptions panel** grouped by the workbook's own
+headings with Base/Optimistic/Stress side by side; **interactive charts** for
+the key trajectories; and a **scenario switcher** with a **compare mode** that
+overlays all three scenarios on one measure.
+
+Switching and comparing are instant because every scenario is already in the
+JSON. The page displays results — it never recomputes them. Changing an
+assumption means editing the YAML and re-running the export.
+
+**The seam for live what-ifs:** all data access goes through the `DataSource`
+object at the top of the script. Pointing it at a Python API that accepts
+edited assumptions and returns the same bundle shape is a change to `load()`
+and nothing else — no chart, table or panel touches the transport.
+
 ## Changing an assumption
 
 Edit the relevant value in [`assumptions/base.yaml`](assumptions/base.yaml) (or

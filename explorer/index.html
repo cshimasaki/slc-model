@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stroud Land Commons — financial model explorer</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+/* ---------------------------------------------------------------------------
+   Palette. Categorical slots come from a validated set: the three scenario
+   colours clear the all-pairs CVD and normal-vision floors in both modes, and
+   the four series slots clear the adjacent-pair floors. Two light-mode slots
+   sit below 3:1 against the surface, so every chart ships a table view — that
+   is the relief, not an optional extra.
+--------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+  --surface-1: #fcfcfb;
+  --plane: #f9f9f7;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+
+  --scenario-base: #2a78d6;
+  --scenario-optimistic: #1baf7a;
+  --scenario-stress: #eb6834;
+
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+
+  --status-good: #0ca30c;
+  --status-critical: #d03b3b;
+  --success-text: #006300;
+
+  --radius: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --plane: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+
+    --scenario-base: #3987e5;
+    --scenario-optimistic: #199e70;
+    --scenario-stress: #d95926;
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+
+    --success-text: #0ca30c;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-1: #1a1a19;
+  --plane: #0d0d0d;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --scenario-base: #3987e5;
+  --scenario-optimistic: #199e70;
+  --scenario-stress: #d95926;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --success-text: #0ca30c;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--plane);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px 80px; }
+
+header { padding: 40px 0 8px; }
+h1 { font-size: 1.6rem; font-weight: 650; margin: 0 0 6px; letter-spacing: -0.01em; }
+.sub { color: var(--text-secondary); margin: 0; max-width: 68ch; }
+.meta { color: var(--text-muted); font-size: 0.82rem; margin-top: 10px; }
+
+/* ------------------------------------------------------------ controls --- */
+.controls {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--plane);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+  margin-bottom: 26px;
+  display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center;
+}
+.control-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.control-label {
+  font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted); font-weight: 600;
+}
+.seg { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button {
+  font: inherit; font-size: 0.88rem; padding: 6px 14px; cursor: pointer;
+  background: var(--surface-1); color: var(--text-secondary);
+  border: 0; border-right: 1px solid var(--border);
+  display: flex; align-items: center; gap: 7px;
+}
+.seg button:last-child { border-right: 0; }
+.seg button:hover { color: var(--text-primary); }
+.seg button[aria-pressed="true"] { background: var(--text-primary); color: var(--surface-1); }
+.seg button[aria-pressed="true"] .dot { box-shadow: 0 0 0 2px var(--surface-1); }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.chk { display: flex; align-items: center; gap: 7px; font-size: 0.88rem; cursor: pointer;
+       color: var(--text-secondary); }
+.chk input { accent-color: var(--series-1); width: 15px; height: 15px; cursor: pointer; }
+select {
+  font: inherit; font-size: 0.88rem; padding: 6px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary);
+  cursor: pointer; max-width: 300px;
+}
+.ghost {
+  font: inherit; font-size: 0.82rem; padding: 5px 11px; cursor: pointer;
+  background: transparent; color: var(--text-secondary);
+  border: 1px solid var(--border); border-radius: 7px;
+}
+.ghost:hover { color: var(--text-primary); }
+
+/* --------------------------------------------------------------- tiles --- */
+h2 {
+  font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--text-muted); font-weight: 650;
+  margin: 38px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(184px, 1fr)); gap: 12px; }
+.tile {
+  background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+}
+.tile .t-label { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 5px; }
+.tile .t-value { font-size: 1.32rem; font-weight: 600; letter-spacing: -0.01em; }
+.tile .t-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px;
+               display: flex; align-items: center; gap: 5px; }
+.bad { color: var(--status-critical); }
+.good { color: var(--success-text); }
+
+/* -------------------------------------------------------------- charts --- */
+.chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(430px, 1fr)); gap: 16px; }
+@media (max-width: 720px) { .chart-grid { grid-template-columns: 1fr; } }
+.card {
+  background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px 14px;
+}
+.card-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 2px; }
+.card h3 { font-size: 0.98rem; font-weight: 620; margin: 0; }
+.card .caption { font-size: 0.79rem; color: var(--text-secondary); margin: 4px 0 10px; }
+.canvas-box { position: relative; height: 240px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; }
+.legend span { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); }
+.swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+.swatch.dash { height: 0; border-top: 2px dashed currentColor; border-radius: 0; }
+
+.table-wrap { overflow-x: auto; margin-top: 12px; display: none; }
+.table-wrap.show { display: block; }
+table { border-collapse: collapse; font-size: 0.78rem; width: 100%; }
+th, td { padding: 4px 9px; text-align: right; white-space: nowrap;
+         border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+th { color: var(--text-muted); font-weight: 600; text-align: right; position: sticky; top: 0;
+     background: var(--surface-1); }
+th:first-child, td:first-child { text-align: left; }
+
+/* --------------------------------------------------------- assumptions --- */
+.section { border: 1px solid var(--border); border-radius: var(--radius);
+           background: var(--surface-1); margin-bottom: 10px; overflow: hidden; }
+.section > summary {
+  cursor: pointer; padding: 12px 16px; font-weight: 600; font-size: 0.92rem;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  list-style: none;
+}
+.section > summary::-webkit-details-marker { display: none; }
+.section > summary::after { content: "＋"; color: var(--text-muted); font-weight: 400; }
+.section[open] > summary::after { content: "−"; }
+.section > summary:hover { color: var(--text-primary); }
+.section-body { padding: 0 16px 14px; overflow-x: auto; }
+.a-table { font-size: 0.82rem; }
+.a-table th:first-child, .a-table td:first-child { width: 44%; white-space: normal; }
+.a-table .unit { color: var(--text-muted); font-size: 0.76rem; }
+.tag {
+  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-muted); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 5px; vertical-align: 1px; white-space: nowrap;
+}
+.inherited { color: var(--text-muted); }
+.overridden { font-weight: 620; }
+.legend-note { font-size: 0.78rem; color: var(--text-secondary); margin: 0 0 14px; }
+
+.callout {
+  border-left: 3px solid var(--status-critical); background: var(--surface-1);
+  border-radius: 0 var(--radius) var(--radius) 0; padding: 12px 16px; margin: 16px 0;
+  font-size: 0.87rem; color: var(--text-secondary);
+}
+.callout strong { color: var(--text-primary); }
+
+#error {
+  display: none; background: var(--surface-1); border: 1px solid var(--status-critical);
+  border-radius: var(--radius); padding: 20px 22px; margin: 30px 0;
+}
+#error code { background: var(--plane); padding: 2px 7px; border-radius: 4px; font-size: 0.86em; }
+footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--border);
+         color: var(--text-muted); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Stroud Land Commons — financial model</h1>
+  <p class="sub">
+    A 50-year projection of a community land trust funded by a Tontine fund,
+    community shares, and gifts and bequests. Every figure here is computed by
+    the Python model and validated against the original spreadsheet.
+  </p>
+  <p class="meta" id="meta"></p>
+</header>
+
+<div id="error">
+  <p><strong>Could not load <code>data.json</code>.</strong></p>
+  <p id="error-detail"></p>
+  <p>
+    If you opened this file directly from disk, the browser blocks reading the
+    data file alongside it. Serve the folder instead:
+  </p>
+  <p><code>python -m http.server 8000</code> &nbsp;then open&nbsp;
+     <code>http://localhost:8000/explorer/</code></p>
+</div>
+
+<div id="app" hidden>
+
+  <div class="controls">
+    <div class="control-group">
+      <span class="control-label">Scenario</span>
+      <div class="seg" id="scenario-seg"></div>
+    </div>
+    <div class="control-group">
+      <label class="chk">
+        <input type="checkbox" id="compare-toggle">
+        Compare scenarios
+      </label>
+      <select id="compare-metric" hidden></select>
+    </div>
+    <div class="control-group" style="margin-left:auto">
+      <button class="ghost" id="tables-toggle" aria-pressed="false">Show data tables</button>
+      <button class="ghost" id="theme-toggle">Dark</button>
+    </div>
+  </div>
+
+  <div id="compare-note" class="legend-note" hidden></div>
+
+  <h2 id="headline-title">Headline figures</h2>
+  <div class="tiles" id="tiles"></div>
+
+  <div id="warnings"></div>
+
+  <h2>Trajectories</h2>
+  <div class="chart-grid" id="charts"></div>
+
+  <h2>Assumptions</h2>
+  <p class="legend-note">
+    Grouped as in the original <em>Control &amp; Parameters</em> sheet. Values shown
+    <span class="overridden">in bold</span> are set by that scenario;
+    <span class="inherited">greyed</span> values are inherited from Base unchanged.
+    A <span class="tag">derived</span> row is computed by the model from other
+    parameters, not edited directly.
+  </p>
+  <div id="assumptions"></div>
+
+  <footer>
+    <p>
+      Generated from <code>assumptions/*.yaml</code> by the Python model. To change an
+      assumption, edit the YAML and re-run <code>python -m export.build_all</code> —
+      this page displays results, it never recomputes them.
+    </p>
+  </footer>
+</div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------------------------------------------------------------------------
+   Data source.
+
+   Everything downstream reads the bundle through this one object. Today it
+   fetches a file the Python export wrote. Swapping it for a live what-if API
+   -- POST the edited assumptions, get back the same bundle shape -- means
+   replacing `load()` and nothing else: no chart, table or panel touches the
+   transport. That is the seam, kept deliberately narrow.
+--------------------------------------------------------------------------- */
+const DataSource = {
+  async load() {
+    const res = await fetch("data.json", { cache: "no-cache" });
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    return res.json();
+  }
+};
+
+const SCENARIO_LABELS = { base: "Base", optimistic: "Optimistic", stress: "Stress" };
+
+const state = {
+  bundle: null,
+  scenario: "base",
+  compare: false,
+  compareMetric: "portfolio_value",
+  showTables: false,
+  charts: []
+};
+
+/* ------------------------------------------------------------ formatting --- */
+const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+/* A true minus sign, not a hyphen, and used for every unit -- a table of
+   figures that mixes the two looks like a typo. */
+const MINUS = "−";
+
+function fmt(value, unit, { compact = false } = {}) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  const abs = Math.abs(value);
+  const sign = value < 0 ? MINUS : "";
+
+  switch (unit) {
+    case "£": {
+      if (compact) {
+        if (abs >= 1e6) return `${sign}£${(abs / 1e6).toFixed(abs >= 1e7 ? 0 : 1)}m`;
+        if (abs >= 1e3) return `${sign}£${(abs / 1e3).toFixed(0)}k`;
+        return `${sign}£${abs.toFixed(0)}`;
+      }
+      return `${sign}£${abs.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
+    }
+    case "%": return `${sign}${(abs * 100).toFixed(1)}%`;
+    case "x": return `${sign}${abs.toFixed(2)}×`;
+    case "months": return `${sign}${abs.toFixed(1)} mo`;
+    case "count": return `${sign}${abs.toLocaleString("en-GB")}`;
+    default: return String(value);
+  }
+}
+
+/* --------------------------------------------------------------- charts --- */
+function seriesColor(index) {
+  return cssVar(`--series-${(index % 4) + 1}`);
+}
+function scenarioColor(name) {
+  return cssVar(`--scenario-${name}`);
+}
+
+/* Shared Chart.js options. Grid and axes stay recessive; the crosshair and
+   tooltip are on by default because an HTML chart is interactive by nature. */
+function baseOptions(unit) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: { display: false },          // rendered as HTML below each chart
+      tooltip: {
+        backgroundColor: cssVar("--surface-1"),
+        titleColor: cssVar("--text-primary"),
+        bodyColor: cssVar("--text-secondary"),
+        borderColor: cssVar("--border"),
+        borderWidth: 1,
+        padding: 10,
+        cornerRadius: 8,
+        displayColors: true,
+        boxWidth: 9,
+        boxHeight: 9,
+        boxPadding: 4,
+        usePointStyle: true,
+        callbacks: {
+          title: (items) => `Year ${items[0].label}`,
+          label: (ctx) => {
+            const v = ctx.parsed.y;
+            return ` ${ctx.dataset.label}: ${v === null ? "—" : fmt(v, unit)}`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        border: { color: cssVar("--axis") },
+        ticks: {
+          color: cssVar("--text-muted"), font: { size: 11 },
+          maxRotation: 0, autoSkipPadding: 18
+        }
+      },
+      y: {
+        grid: { color: cssVar("--grid"), drawTicks: false },
+        border: { display: false },
+        ticks: {
+          color: cssVar("--text-muted"), font: { size: 11 }, padding: 6,
+          callback: (v) => fmt(v, unit, { compact: true })
+        }
+      }
+    },
+    elements: {
+      line: { borderWidth: 2, tension: 0.15 },
+      point: { radius: 0, hoverRadius: 5, hitRadius: 14, borderWidth: 0 },
+      bar: { borderRadius: 4, borderSkipped: "bottom" }
+    }
+  };
+}
+
+function referenceLine(bundle, scenario, key) {
+  const value = bundle.scenarios[scenario].reference[key];
+  const labels = {
+    pf_ltv_limit: "LTV limit",
+    __dscr_covenant: "Covenant minimum",
+    min_cash_buffer: "Minimum cash buffer"
+  };
+  return { value, label: labels[key] || key };
+}
+
+/**
+ * Build the datasets for one chart.
+ * In compare mode a chart shows a single metric across scenarios (colour =
+ * scenario); otherwise it shows its own series for one scenario (colour =
+ * series). Either way colour follows the entity, never its position, so
+ * toggling a scenario off never repaints the ones that remain.
+ */
+function buildDatasets(chart, bundle) {
+  const kind = chart.kind === "bar" ? "bar" : "line";
+  const datasets = [];
+
+  if (state.compare) {
+    const metric = state.compareMetric;
+    for (const name of bundle.meta.scenarios) {
+      const sc = bundle.scenarios[name];
+      datasets.push({
+        type: kind,
+        label: SCENARIO_LABELS[name],
+        data: sc.series[metric],
+        borderColor: scenarioColor(name),
+        backgroundColor: kind === "bar" ? scenarioColor(name) : "transparent",
+        spanGaps: false
+      });
+    }
+    return datasets;
+  }
+
+  const sc = bundle.scenarios[state.scenario];
+  chart.series.forEach((key, i) => {
+    datasets.push({
+      type: kind,
+      label: bundle.series_meta[key].label,
+      data: sc.series[key],
+      borderColor: seriesColor(i),
+      backgroundColor: kind === "bar" ? seriesColor(i) : "transparent",
+      spanGaps: false
+    });
+  });
+
+  for (const refKey of chart.reference) {
+    const ref = referenceLine(bundle, state.scenario, refKey);
+    if (ref.value === undefined || ref.value === null) continue;
+    datasets.push({
+      type: "line",
+      label: ref.label,
+      data: sc.years.map(() => ref.value),
+      borderColor: cssVar("--status-critical"),
+      borderDash: [5, 4],
+      borderWidth: 1.5,
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      _isReference: true
+    });
+  }
+  return datasets;
+}
+
+function renderLegend(el, datasets) {
+  el.innerHTML = datasets.map((d) => {
+    const cls = d._isReference ? "swatch dash" : "swatch";
+    const style = d._isReference
+      ? `color:${d.borderColor}`
+      : `background:${d.borderColor}`;
+    return `<span><i class="${cls}" style="${style}"></i>${d.label}</span>`;
+  }).join("");
+}
+
+function renderTable(el, chart, bundle, datasets) {
+  const sc = bundle.scenarios[state.scenario];
+  const unit = chart.unit;
+  const rows = datasets.filter((d) => !d._isReference);
+  const head = `<tr><th>Year</th>${rows.map((d) => `<th>${d.label}</th>`).join("")}</tr>`;
+  const body = sc.years.map((year, i) => {
+    const cells = rows.map((d) => `<td>${fmt(d.data[i], unit)}</td>`).join("");
+    return `<tr><td>${year} <span class="unit">(${sc.calendar_years[i]})</span></td>${cells}</tr>`;
+  }).join("");
+  el.innerHTML = `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+function renderCharts() {
+  const bundle = state.bundle;
+  const host = document.getElementById("charts");
+
+  state.charts.forEach((c) => c.destroy());
+  state.charts = [];
+  host.innerHTML = "";
+
+  const list = state.compare
+    ? [{
+        key: "compare",
+        title: bundle.series_meta[state.compareMetric].label,
+        unit: bundle.series_meta[state.compareMetric].unit,
+        kind: "line",
+        series: [state.compareMetric],
+        reference: [],
+        caption: bundle.series_meta[state.compareMetric].note || ""
+      }]
+    : bundle.charts;
+
+  // Build every card first, then instantiate the charts. Chart.js measures its
+  // container at construction time, so creating a chart before the grid has
+  // laid out gives the first card a canvas sized to the whole row.
+  const pending = [];
+  for (const chart of list) {
+    const card = document.createElement("div");
+    card.className = "card";
+    if (state.compare) card.style.gridColumn = "1 / -1";
+
+    const datasets = buildDatasets(chart, bundle);
+    card.innerHTML = `
+      <div class="card-head"><h3>${chart.title}</h3></div>
+      ${chart.caption ? `<p class="caption">${chart.caption}</p>` : ""}
+      <div class="canvas-box"><canvas></canvas></div>
+      <div class="legend"></div>
+      <div class="table-wrap ${state.showTables ? "show" : ""}"></div>
+    `;
+    host.appendChild(card);
+    pending.push({ chart, card, datasets });
+  }
+
+  const years = bundle.scenarios[state.scenario].years;
+  for (const { chart, card, datasets } of pending) {
+    const chartObj = new Chart(card.querySelector("canvas"), {
+      type: chart.kind === "bar" ? "bar" : "line",
+      data: { labels: years, datasets },
+      options: baseOptions(chart.unit)
+    });
+    state.charts.push(chartObj);
+
+    // A legend is always present for two or more series; with one series the
+    // title already names it.
+    if (datasets.length >= 2) renderLegend(card.querySelector(".legend"), datasets);
+    renderTable(card.querySelector(".table-wrap"), chart, bundle, datasets);
+  }
+
+  // One more pass on the next frame, so a chart built during a layout change
+  // (theme switch, compare toggle) settles to its final container width.
+  requestAnimationFrame(() => state.charts.forEach((c) => c.resize()));
+}
+
+/* ---------------------------------------------------------------- tiles --- */
+const TILE_ORDER = [
+  "portfolio_final", "portfolio_value_final", "net_assets_final",
+  "cumulative_retained_final", "total_debt_final", "tontine_raised",
+  "min_dscr", "max_ltv", "min_reserve_cover", "min_free_cash",
+  "years_dscr_breach", "years_capital_call"
+];
+
+/** Which headline figures signal trouble, and at what threshold. */
+function tileTone(key, value, sc) {
+  if (value === null || value === undefined) return "";
+  switch (key) {
+    case "min_dscr": return value < sc.reference.__dscr_covenant ? "bad" : "good";
+    case "max_ltv": return value >= sc.reference.pf_ltv_limit - 1e-9 ? "bad" : "";
+    case "min_reserve_cover": return value < 0 ? "bad" : "";
+    case "min_free_cash": return value < 0 ? "bad" : "";
+    case "years_dscr_breach":
+    case "years_capital_call": return value > 0 ? "bad" : "good";
+    default: return "";
+  }
+}
+
+function renderTiles() {
+  const bundle = state.bundle;
+  const host = document.getElementById("tiles");
+  const title = document.getElementById("headline-title");
+
+  if (state.compare) {
+    title.textContent = "Headline figures — all scenarios";
+    const keys = ["portfolio_final", "net_assets_final", "min_dscr", "years_dscr_breach"];
+    host.innerHTML = bundle.meta.scenarios.map((name) => {
+      const sc = bundle.scenarios[name];
+      const rows = keys.map((k) => {
+        const h = sc.headline[k];
+        const tone = tileTone(k, h.value, sc);
+        return `<div class="t-sub"><span style="color:var(--text-secondary)">${h.label}:</span>
+                <span class="${tone}">${fmt(h.value, h.unit, { compact: true })}</span></div>`;
+      }).join("");
+      return `<div class="tile">
+        <div class="t-label"><i class="swatch" style="display:inline-block;background:${scenarioColor(name)}"></i>
+          ${SCENARIO_LABELS[name]}</div>${rows}</div>`;
+    }).join("");
+    return;
+  }
+
+  title.textContent = `Headline figures — ${SCENARIO_LABELS[state.scenario]}`;
+  const sc = bundle.scenarios[state.scenario];
+  host.innerHTML = TILE_ORDER.map((key) => {
+    const h = sc.headline[key];
+    if (!h) return "";
+    const tone = tileTone(key, h.value, sc);
+    return `<div class="tile">
+      <div class="t-label">${h.label}</div>
+      <div class="t-value ${tone}">${fmt(h.value, h.unit, { compact: true })}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderWarnings() {
+  const host = document.getElementById("warnings");
+  if (state.compare) { host.innerHTML = ""; return; }
+  const sc = state.bundle.scenarios[state.scenario];
+  const breaches = sc.headline.years_dscr_breach.value;
+  const minCover = sc.headline.min_reserve_cover.value;
+
+  if (!breaches) { host.innerHTML = ""; return; }
+  host.innerHTML = `<div class="callout">
+    <strong>This scenario breaches its covenants.</strong>
+    Debt service cover falls below the ${sc.reference.__dscr_covenant.toFixed(2)}× covenant in
+    ${breaches} of ${sc.years.length} years, reaching a low of
+    ${fmt(sc.headline.min_dscr.value, "x")}${minCover !== null && minCover < 0
+      ? `, and reserve cover goes negative (${fmt(minCover, "months")})` : ""}.
+    This is what the model projects on these assumptions — not an error in it.
+  </div>`;
+}
+
+/* ---------------------------------------------------------- assumptions --- */
+function renderAssumptions() {
+  const bundle = state.bundle;
+  const host = document.getElementById("assumptions");
+
+  host.innerHTML = bundle.assumptions.map((section, idx) => {
+    const rows = section.params.map((p) => {
+      const cells = bundle.meta.scenarios.map((name) => {
+        const value = p.values[name];
+        const isOverride = p.overridden[name];
+        const cls = name === "base" ? "" : (isOverride ? "overridden" : "inherited");
+        return `<td class="${cls}">${formatParam(value, p.unit)}</td>`;
+      }).join("");
+      const tag = p.derived ? ` <span class="tag">derived</span>` : "";
+      return `<tr>
+        <td>${p.label}${tag}<br><span class="unit">${p.unit}&nbsp;·&nbsp;${p.key}</span></td>
+        ${cells}</tr>`;
+    }).join("");
+
+    return `<details class="section" ${idx === 0 ? "open" : ""}>
+      <summary>${section.title}</summary>
+      <div class="section-body">
+        <table class="a-table">
+          <thead><tr><th>Parameter</th><th>Base</th><th>Optimistic</th><th>Stress</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </details>`;
+  }).join("");
+}
+
+/** Assumption values carry their own units, which are not the chart units. */
+function formatParam(value, unit) {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "string") return value;
+  if (unit && unit.includes("%")) return `${(value * 100).toLocaleString("en-GB", { maximumFractionDigits: 2 })}%`;
+  if (unit === "£" || (unit && unit.startsWith("£"))) {
+    return `£${value.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
+  }
+  if (unit === "1 / 0") return value === 1 ? "Yes" : "No";
+  return value.toLocaleString("en-GB", { maximumFractionDigits: 4 });
+}
+
+/* --------------------------------------------------------------- chrome --- */
+function renderScenarioSwitch() {
+  const seg = document.getElementById("scenario-seg");
+  seg.innerHTML = state.bundle.meta.scenarios.map((name) => `
+    <button data-scenario="${name}" aria-pressed="${name === state.scenario}">
+      <i class="dot" style="background:${scenarioColor(name)}"></i>${SCENARIO_LABELS[name]}
+    </button>`).join("");
+
+  seg.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.scenario = btn.dataset.scenario;
+      seg.querySelectorAll("button").forEach((b) =>
+        b.setAttribute("aria-pressed", String(b === btn)));
+      renderAll();
+    });
+  });
+}
+
+function renderCompareControl() {
+  const select = document.getElementById("compare-metric");
+  const seen = new Set();
+  const options = [];
+  for (const chart of state.bundle.charts) {
+    for (const key of chart.series) {
+      if (seen.has(key)) continue;
+      seen.add(key);
+      options.push(`<option value="${key}">${state.bundle.series_meta[key].label}</option>`);
+    }
+  }
+  select.innerHTML = options.join("");
+  select.value = state.compareMetric;
+  select.addEventListener("change", () => {
+    state.compareMetric = select.value;
+    renderAll();
+  });
+}
+
+function renderAll() {
+  const compareNote = document.getElementById("compare-note");
+  const seg = document.getElementById("scenario-seg");
+  const select = document.getElementById("compare-metric");
+
+  select.hidden = !state.compare;
+  seg.style.opacity = state.compare ? 0.4 : 1;
+  seg.style.pointerEvents = state.compare ? "none" : "auto";
+  compareNote.hidden = !state.compare;
+  if (state.compare) {
+    compareNote.textContent =
+      "Comparing one measure across all three scenarios. Switch off to see every " +
+      "trajectory for a single scenario.";
+  }
+
+  renderTiles();
+  renderWarnings();
+  renderCharts();
+}
+
+function wireChrome() {
+  document.getElementById("compare-toggle").addEventListener("change", (e) => {
+    state.compare = e.target.checked;
+    renderAll();
+  });
+
+  const tablesBtn = document.getElementById("tables-toggle");
+  tablesBtn.addEventListener("click", () => {
+    state.showTables = !state.showTables;
+    tablesBtn.setAttribute("aria-pressed", String(state.showTables));
+    tablesBtn.textContent = state.showTables ? "Hide data tables" : "Show data tables";
+    document.querySelectorAll(".table-wrap").forEach((el) =>
+      el.classList.toggle("show", state.showTables));
+  });
+
+  const themeBtn = document.getElementById("theme-toggle");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  let dark = prefersDark;
+  const applyTheme = () => {
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    themeBtn.textContent = dark ? "Light" : "Dark";
+    // Chart.js caches resolved colours, so the charts are rebuilt on a theme
+    // change rather than recoloured in place.
+    if (state.bundle) renderAll();
+  };
+  themeBtn.addEventListener("click", () => { dark = !dark; applyTheme(); });
+  applyTheme();
+}
+
+/* ------------------------------------------------------------------ init --- */
+(async function init() {
+  wireChrome();
+  try {
+    state.bundle = await DataSource.load();
+  } catch (err) {
+    document.getElementById("error").style.display = "block";
+    document.getElementById("error-detail").textContent = String(err);
+    return;
+  }
+
+  const b = state.bundle;
+  document.getElementById("meta").textContent =
+    `${b.meta.n_years}-year projection · ${b.meta.scenarios.length} scenarios · ` +
+    `generated ${b.meta.generated} from ${b.meta.source}`;
+
+  renderScenarioSwitch();
+  renderCompareControl();
+  renderAssumptions();
+
+  // Reveal the app *before* building any chart. Chart.js measures its
+  // container at construction, and a hidden container measures zero -- charts
+  // built first would render blank and never recover on their own.
+  document.getElementById("app").hidden = false;
+  renderAll();
+})();
+</script>
+</body>
+</html>
