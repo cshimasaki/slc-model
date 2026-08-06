@@ -1,0 +1,11 @@
+# Model and exports
+PyYAML>=6.0
+openpyxl>=3.1
+
+# Tests
+pytest>=8.0
+
+# Only needed to regenerate validation/baselines/ from the Excel workbook.
+# Requires Excel on Windows. The committed baselines mean day-to-day
+# validation does not need this.
+pywin32>=306 ; sys_platform == "win32"

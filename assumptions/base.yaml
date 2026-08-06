@@ -1,0 +1,136 @@
+# =============================================================================
+# STROUD LAND COMMONS — BASE SCENARIO ASSUMPTIONS
+# =============================================================================
+# This file is the full parameter set. Optimistic and Stress hold only the
+# values that differ from these, so a diff between two scenario files IS the
+# scenario definition.
+#
+# Sections and parameter names mirror the "Control & Parameters" sheet of
+# "Financial Modelling for SLC V2.1.xlsx" exactly. Each key is the Excel
+# named range the workbook's own formulas use, so a formula that read
+# `pf_ltv_limit` in Excel reads `pf_ltv_limit` here.
+#
+# Percentages are stored as fractions: 0.025 means 2.5% p.a.
+# "real" means in Year-1 money, before the model applies indexation.
+#
+# NOT AN INPUT: `pf_coupon_spread` (the implied SLC coupon) is derived by the
+# model as pf_investor_rate + pf_fund_op_margin + pf_fund_reg_charge, exactly
+# as the workbook derives it with =SUM(E14:E16). Change the three components,
+# not the total.
+# =============================================================================
+
+macro_indexation:
+  cpi_general: 0.025         # General CPI inflation (% p.a.)
+  rent_inflation: 0.025      # Rent inflation (% p.a.)
+  hpi_premium: 0.01          # HPI premium over CPI (% p.a.)
+  base_calendar_year: 2026   # Calendar year that model Year 1 represents
+
+tontine_fund:
+  # Closed-end lifetime annuity mutual. Interest-only and index-linked: the
+  # principal is uplifted by CPI each year rather than amortised, and from
+  # pf_release_start_yr a slice of the balance is released to SLC reserves each
+  # year as a non-cash credit (a parametric proxy for annuitant survivorship).
+  pf_index_label: CPI            # Indexation basis for principal and coupon
+  pf_investor_rate: 0.03         # Target investor annuity rate, spread over index (% p.a.)
+  pf_fund_op_margin: 0.005       # Fund operating cost margin (% p.a.)
+  pf_fund_reg_charge: 0.0025     # Fund regulatory capital charge (% p.a.)
+  pf_max_raise: 50000000         # Tontine maximum raise (£)
+  pf_invest_phase_yrs: 10        # Investment phase duration (years) — drawdowns only within this window
+  pf_release_start_yr: 25        # Release phase start (model year)
+  pf_release_rate: 0.06          # Annual release rate (% of outstanding balance p.a.)
+  pf_ltv_limit: 0.70             # LTV limit (% of portfolio value)
+  pf_refi_toggle: 0              # Refinance into commercial mortgage? (1 = Yes)
+  pf_refi_year: 26               # Refinancing year (model year)
+  pf_refi_rate: 0.055            # Commercial mortgage rate (% p.a.)
+  pf_refi_amort_yrs: 25          # Commercial mortgage amortisation (years)
+
+community_shares:
+  # Junior debt. Withdrawable after a restriction period, capped as a share of
+  # total capital, and paying a dividend only out of available surplus.
+  cs_dividend_rate: 0.03         # Default dividend rate (% p.a.)
+  cs_max_pct_capital: 0.20       # Maximum issuance cap (% of total capital)
+  cs_withdrawal_years: 5         # Withdrawal restriction period (years)
+  cs_issue_cost_pct: 0.05        # Issuance / marketing cost (% of proceeds)
+  cs_baseline_issue: 250000      # Baseline annual issuance, real (£ p.a.)
+  cs_takeup_mult: 1.0            # Take-up multiplier (x)
+  cs_withdrawal_rate: 0.02       # Annual withdrawal rate on eligible shares (% p.a.)
+
+bequests_gifts:
+  gift_baseline: 40000           # Cash gifts from living donors, Gift Aid eligible (£ p.a.)
+  beq_baseline: 60000            # Bequests from estates, not Gift Aid eligible (£ p.a.)
+  founding_capital: 150000       # Founding capital injection, Year 1 only (£)
+  beq_growth_mult: 0.0           # Real growth multiplier on gifts and bequests (% p.a.)
+
+rent_yield:
+  gross_yield: 0.05              # Gross rental yield (% of purchase price)
+  lc_share: 0.80                 # Land Commons share of gross rent (%)
+  void_rate: 0.05                # Void rate (%)
+
+acquisition:
+  avg_price: 280000              # Average property price, real Year 1 (£)
+  sdlt_rate: 0.0                 # SDLT rate — 0 assumes charitable relief (% of price)
+  conveyancing: 2500             # Conveyancing per property, real (£)
+  survey_cost: 800               # Survey per property, real (£)
+  retrofit_cost: 5000            # Initial retrofit per property, real (£)
+
+admin_costs_early:
+  # Costs in the earliest years, before the organisation reaches target scale.
+  # The model ramps linearly from these to the target values below, reaching
+  # target at `logistic_start_yr`.
+  board_early: 0                 # Board remuneration (£ p.a.)
+  acct_early: 3000               # Accounting & audit (£ p.a.)
+  fca_early: 1500                # FCA & annual reporting (£ p.a.)
+  ins_early: 1000                # Insurance (£ p.a.)
+
+admin_costs_target:
+  board_target: 12000            # Board remuneration (£ p.a.)
+  acct_target: 8000              # Accounting & audit (£ p.a.)
+  fca_target: 3000               # FCA & annual reporting (£ p.a.)
+  ins_target: 2000               # Insurance (£ p.a.)
+  admin_per_prop: 150            # Variable admin per property (£ / property / yr)
+
+reserves:
+  reserve_tgt_months: 6          # Target reserve (months of debt service)
+  reserve_min_months: 3          # Minimum covenant (months of debt service)
+  reserve_build_year: 10         # Target reserve fully built by (model year)
+  min_cash_buffer: 25000         # Minimum operating cash buffer (£)
+
+growth_curve:
+  # Years 1-3 are absolute acquisition counts. From `logistic_start_yr` the
+  # model switches to a logistic S-curve with intrinsic rate ln(2)/doubling.
+  acq_year1: 1                   # Properties acquired — Year 1
+  acq_year2: 2                   # Properties acquired — Year 2
+  acq_year3: 3                   # Properties acquired — Year 3
+  logistic_start_yr: 4           # Logistic growth begins (model year)
+  logistic_floor: 3              # Logistic floor, min acquisitions p.a. (properties)
+  logistic_ceiling: 200          # Logistic ceiling, max portfolio (properties)
+  logistic_dbl_yrs: 4            # Doubling rate (years)
+
+capex_maintenance:
+  sinking_per_prop: 1500         # Sinking fund contribution (£ / property / yr)
+  maint_per_prop: 700            # Structural maintenance spend (£ / property / yr)
+  sinking_return: 0.0            # Sinking fund investment return (% p.a.)
+
+market_shock:
+  # A one-off house-price shock, optionally followed by a period of suppressed
+  # rent growth. Inert unless hpi_shock_year > 0.
+  hpi_shock_year: 0              # One-off HPI shock year (0 = none)
+  hpi_shock_pct: -0.20           # One-off HPI shock (%)
+  rent_shock_years: 0            # Rent shock duration following HPI shock (years)
+  rent_shock_rate: 0.0           # Rent inflation during shock (% p.a.)
+
+tax_gift_aid:
+  ct_exempt_toggle: 1            # Corporation tax exempt? (1 = Yes)
+  ct_rate: 0.25                  # Corporation tax rate if not exempt (%)
+  gift_aid_toggle: 1             # Gift Aid applicable? (1 = Yes)
+  gift_aid_rate: 0.25            # Gift Aid recovery rate (% of qualifying gifts)
+
+funding_discipline:
+  constrain_growth: 1            # Cap acquisitions at affordable level? (1 = Yes)
+
+monthly_timing:
+  # Drives the Monthly Cash Flow view (years 1-5 only). Does not affect the
+  # annual figures — it only phases them within each year.
+  acq_month: 12                  # Month in year when acquisitions complete (1-12)
+  debt_pay_freq: 4               # Debt service payments per year
+  div_month: 12                  # Month in year when dividends are paid (1-12)

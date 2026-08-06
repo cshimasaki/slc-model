@@ -1,0 +1,40 @@
+# Generated outputs. The model regenerates all of these from the YAML in one
+# command, so they are build artefacts, not source. The exception is
+# validation/baselines/*.json, which IS committed -- see below.
+dist/
+export_output/
+*.xlsx
+*.xls
+*.pdf
+*.csv
+
+# The explorer's data bundle is generated from the model. The page is source;
+# its data is not.
+explorer/data.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary Excel lock files, in case the source workbook is open nearby
+~$*
+
+# NOT ignored, deliberately:
+#   validation/baselines/*.json  -- the frozen figures Excel itself produced.
+#   Committing them means the port can be re-validated on a machine with no
+#   Excel installed, and that any change to the reference numbers shows up as
+#   a reviewable diff rather than a silent shift.
+!validation/baselines/*.json

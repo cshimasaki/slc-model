@@ -1,0 +1,41 @@
+# =============================================================================
+# STRESS SCENARIO — deltas from base.yaml
+# =============================================================================
+# Question this scenario answers:
+#   "Can the Commons survive a bad decade — high inflation, empty properties,
+#    a collapse in community-share appetite and a housing crash — without
+#    breaching its covenants or running out of cash?"
+#
+# Narrative:
+#   - Void rate +10 points, to 15%
+#   - CPI +2 points, to 4.5%
+#   - Community-share take-up halved (0.5x)
+#   - A one-off -20% house-price shock in Year 5
+#   - Rent growth held at 0% for the two years following the shock
+#
+# Note on inheritance, mirroring the workbook: the -20% shock size and the 0%
+# shocked-rent rate are NOT set here — they are inherited from base.yaml,
+# where they already sit as hpi_shock_pct: -0.20 and rent_shock_rate: 0.0.
+# What Stress actually changes is switching the shock ON (hpi_shock_year: 5)
+# and giving it a two-year rent tail (rent_shock_years: 2). Base holds the
+# same shock definition dormant with hpi_shock_year: 0.
+#
+# Rent inflation and the HPI premium are also inherited from Base rather than
+# worsened — the stress here is the shock and the voids, not a permanently
+# weaker rental market.
+#
+# Every key not listed here is inherited from base.yaml unchanged.
+# =============================================================================
+
+macro_indexation:
+  cpi_general: 0.045         # was 0.025 — high inflation on costs and Tontine principal
+
+community_shares:
+  cs_takeup_mult: 0.5        # was 1.0 — community-share appetite halves
+
+rent_yield:
+  void_rate: 0.15            # was 0.05 — properties stand empty
+
+market_shock:
+  hpi_shock_year: 5          # was 0 (dormant) — fires the -20% shock inherited from Base
+  rent_shock_years: 2        # was 0 — rent growth held at the inherited 0% for two years
