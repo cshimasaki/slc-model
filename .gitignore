@@ -33,8 +33,14 @@ desktop.ini
 ~$*
 
 # NOT ignored, deliberately:
+#
 #   validation/baselines/*.json  -- the frozen figures Excel itself produced.
 #   Committing them means the port can be re-validated on a machine with no
 #   Excel installed, and that any change to the reference numbers shows up as
 #   a reviewable diff rather than a silent shift.
 !validation/baselines/*.json
+#
+#   reference/*.xlsx  -- the original workbook the model was ported from.
+#   The *.xlsx rule above exists to keep generated exports out of the repo;
+#   this one file is not an export, it is the source. See reference/README.md.
+!reference/*.xlsx

@@ -103,8 +103,10 @@ scenario answers.
 cohort rows — against figures Excel itself produced.
 
 The reference figures in `validation/baselines/` are committed, so validation
-runs on a machine with no Excel installed. To regenerate them (needs Excel on
-Windows):
+runs on a machine with no Excel installed. The original workbook is committed
+too, at [`reference/`](reference/) — so the claim "these figures came from that
+spreadsheet" can be checked rather than taken on trust. To regenerate them
+(needs Excel on Windows):
 
 ```bash
 python validation/extract_excel_baseline.py
@@ -156,4 +158,6 @@ export/          JSON bundle, Excel workbook, CSVs
 explorer/        single-file interactive page (Chart.js from CDN)
 validation/      Excel baseline extraction and the row-by-row diff
 tests/           invariants, assumptions behaviour, and the validator's negative control
+reference/       the original workbook this was ported from (frozen at V2.1)
+.github/         CI on every push; Pages deploy rebuilds the explorer from the YAML
 ```

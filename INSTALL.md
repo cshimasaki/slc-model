@@ -124,11 +124,18 @@ You only need to regenerate them if the **original spreadsheet itself** changes.
 That needs **Windows with Excel installed**, plus `pip install pywin32`:
 
 ```bash
-python validation/extract_excel_baseline.py --workbook "path/to/Financial Modelling for SLC V2.1.xlsx"
+python validation/extract_excel_baseline.py
 ```
 
-It drives Excel to switch the scenario dropdown and force a recalculation. It
-works on a copy — your workbook is never modified.
+The workbook is committed at
+[`reference/`](reference/), so this works straight after a clone with no path
+to configure. It drives Excel to switch the scenario dropdown and force a
+recalculation, working on a temporary copy — the file is never modified.
+
+Extraction is deterministic. Re-running it against an unchanged workbook
+produces byte-identical baselines, so if `git diff validation/baselines/` shows
+anything afterwards, something real has changed and is worth understanding
+before you commit it.
 
 ---
 

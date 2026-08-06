@@ -33,12 +33,17 @@ WORKBOOK_NAME = "Financial Modelling for SLC V2.1.xlsx"
 # Where to look for the source workbook, in order of precedence:
 #   1. --workbook on the command line
 #   2. the SLC_WORKBOOK environment variable
-#   3. the repo's parent directory, where the workbook normally sits
+#   3. reference/ inside the repo -- the committed copy, so this works
+#      immediately after a clone
+#   4. the repo's parent directory, where the workbook sat before it was
+#      committed
 #
 # Nothing is hardcoded to one machine: this script has to run for whoever
 # holds the workbook, not just whoever wrote it.
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_XLSX = os.path.join(os.path.dirname(REPO_ROOT), WORKBOOK_NAME)
+BUNDLED_XLSX = os.path.join(REPO_ROOT, "reference", WORKBOOK_NAME)
+SIBLING_XLSX = os.path.join(os.path.dirname(REPO_ROOT), WORKBOOK_NAME)
+DEFAULT_LOCATIONS = (BUNDLED_XLSX, SIBLING_XLSX)
 
 SCENARIOS = ["Base", "Optimistic", "Stress"]
 
@@ -59,12 +64,14 @@ def resolve_workbook(cli_path: str | None = None) -> str:
             raise SystemExit(f"Workbook not found at the path given by {source}:\n  {explicit}")
         return os.path.abspath(explicit)
 
-    if os.path.exists(DEFAULT_XLSX):
-        return os.path.abspath(DEFAULT_XLSX)
+    for candidate in DEFAULT_LOCATIONS:
+        if os.path.exists(candidate):
+            return os.path.abspath(candidate)
 
+    looked = "\n".join(f"  {p}" for p in DEFAULT_LOCATIONS)
     raise SystemExit(
         f"Could not find the source workbook ({WORKBOOK_NAME}).\n\n"
-        f"Looked in: {DEFAULT_XLSX}\n\n"
+        f"Looked in:\n{looked}\n\n"
         f"Point at it explicitly with either:\n"
         f"  python validation/extract_excel_baseline.py --workbook \"path/to/{WORKBOOK_NAME}\"\n"
         f"  set SLC_WORKBOOK=path/to/{WORKBOOK_NAME}\n\n"
