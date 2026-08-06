@@ -12,18 +12,65 @@ values, which only ever hold the last-saved scenario (Base).
 The original workbook is never modified: it is copied to a temp file first and
 that copy is closed without saving.
 
+Windows with Excel only. You do not need this to work on the model -- the
+baselines it writes are committed, so validation and the tests run anywhere.
+
 Run:  python validation/extract_excel_baseline.py
+      python validation/extract_excel_baseline.py --workbook "path/to/model.xlsx"
 """
 
+from __future__ import annotations
+
+import argparse
 import json
 import os
 import shutil
 import sys
 import tempfile
 
-SOURCE_XLSX = r"C:\Users\chika\Documents\Commons\Housing Commons\Finance\Financial Modelling for SLC V2.1.xlsx"
+WORKBOOK_NAME = "Financial Modelling for SLC V2.1.xlsx"
+
+# Where to look for the source workbook, in order of precedence:
+#   1. --workbook on the command line
+#   2. the SLC_WORKBOOK environment variable
+#   3. the repo's parent directory, where the workbook normally sits
+#
+# Nothing is hardcoded to one machine: this script has to run for whoever
+# holds the workbook, not just whoever wrote it.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_XLSX = os.path.join(os.path.dirname(REPO_ROOT), WORKBOOK_NAME)
 
 SCENARIOS = ["Base", "Optimistic", "Stress"]
+
+
+def resolve_workbook(cli_path: str | None = None) -> str:
+    """
+    Find the source workbook, or explain clearly where to put it.
+
+    An explicitly given path that does not exist is an error, never a silent
+    fall-back to the default. A typo'd --workbook that quietly extracted
+    baselines from a *different* workbook would poison the very figures the
+    model is validated against, and nothing downstream would notice.
+    """
+    explicit = cli_path or os.environ.get("SLC_WORKBOOK")
+    if explicit:
+        if not os.path.exists(explicit):
+            source = "--workbook" if cli_path else "SLC_WORKBOOK"
+            raise SystemExit(f"Workbook not found at the path given by {source}:\n  {explicit}")
+        return os.path.abspath(explicit)
+
+    if os.path.exists(DEFAULT_XLSX):
+        return os.path.abspath(DEFAULT_XLSX)
+
+    raise SystemExit(
+        f"Could not find the source workbook ({WORKBOOK_NAME}).\n\n"
+        f"Looked in: {DEFAULT_XLSX}\n\n"
+        f"Point at it explicitly with either:\n"
+        f"  python validation/extract_excel_baseline.py --workbook \"path/to/{WORKBOOK_NAME}\"\n"
+        f"  set SLC_WORKBOOK=path/to/{WORKBOOK_NAME}\n\n"
+        f"You only need this to regenerate the baselines. The committed ones in\n"
+        f"validation/baselines/ are enough to run the tests and validate the model."
+    )
 
 # Year-series sheets run model years 1..50 across columns D..BA.
 YEAR_FIRST_COL, YEAR_LAST_COL = "D", "BA"
@@ -124,10 +171,28 @@ def extract(app, wb, scenario):
 
 
 def main():
-    import win32com.client
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--workbook", help="path to the source .xlsx (see resolve_workbook)")
+    args = parser.parse_args()
 
-    if not os.path.exists(SOURCE_XLSX):
-        sys.exit(f"Source workbook not found: {SOURCE_XLSX}")
+    if sys.platform != "win32":
+        raise SystemExit(
+            "This script drives Excel through COM and only runs on Windows with Excel\n"
+            "installed. You do not need it to work on the model: the baselines in\n"
+            "validation/baselines/ are committed, so `python validation/compare.py`\n"
+            "and the tests run on any platform."
+        )
+
+    try:
+        import win32com.client
+    except ImportError:
+        raise SystemExit(
+            "pywin32 is not installed. Install it with:\n"
+            "  pip install pywin32"
+        ) from None
+
+    source_xlsx = resolve_workbook(args.workbook)
+    print(f"Source workbook: {source_xlsx}")
 
     out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "baselines")
     os.makedirs(out_dir, exist_ok=True)
@@ -135,7 +200,7 @@ def main():
     # Work on a copy so the user's workbook is never touched.
     tmp_dir = tempfile.mkdtemp(prefix="slc_baseline_")
     work_xlsx = os.path.join(tmp_dir, "work.xlsx")
-    shutil.copy2(SOURCE_XLSX, work_xlsx)
+    shutil.copy2(source_xlsx, work_xlsx)
 
     app = win32com.client.DispatchEx("Excel.Application")
     app.Visible = False

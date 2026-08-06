@@ -20,6 +20,12 @@ results; it does not re-implement the model.
 
 ## Quick start
 
+**Setting this up for the first time? See [INSTALL.md](INSTALL.md)** — it covers
+installing Python, what you need for each way of using the project, and
+troubleshooting.
+
+Requires Python 3.11+.
+
 ```bash
 pip install -r requirements.txt
 ```

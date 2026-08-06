@@ -1,0 +1,45 @@
+name: Tests & Excel validation
+
+# Runs on every push and pull request. The validation job is the important one:
+# it re-checks that the Python model still reproduces the original Excel
+# workbook, cell for cell, so a change that quietly alters a number cannot be
+# merged without someone seeing it.
+#
+# No Excel is needed here. The reference figures in validation/baselines/ were
+# extracted from the real workbook and committed, so this runs on Linux.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
+      - name: Validate against the Excel workbook
+        run: python validation/compare.py
+
+      - name: Build all outputs
+        run: python -m export.build_all

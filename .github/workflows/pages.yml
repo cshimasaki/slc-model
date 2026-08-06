@@ -1,0 +1,65 @@
+name: Deploy explorer to GitHub Pages
+
+# Rebuilds the explorer from the committed YAML and publishes it.
+#
+# This is why explorer/data.json is gitignored: it is generated here, from the
+# assumptions as they exist on main, and uploaded straight to Pages. Nobody has
+# to remember to rebuild and commit it, so the published page can never drift
+# from the committed assumptions.
+#
+# Change a number in assumptions/*.yaml, push, and the page updates itself.
+#
+# Requires Settings -> Pages -> Source: "GitHub Actions". On a private repo,
+# Pages needs a paid plan (Team or Enterprise); on a public repo it is free.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; queue instead, and don't cancel a run mid-deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Refuse to publish a model that no longer matches the workbook.
+      - name: Validate against the Excel workbook
+        run: python validation/compare.py
+
+      - name: Build the explorer bundle
+        run: python -m export.build_all --skip-excel
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: explorer
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

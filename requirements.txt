@@ -1,3 +1,6 @@
+# Python 3.11 or newer. No compiled dependencies; runs on Windows, macOS, Linux.
+# See INSTALL.md for setup.
+
 # Model and exports
 PyYAML>=6.0
 openpyxl>=3.1
@@ -5,7 +8,8 @@ openpyxl>=3.1
 # Tests
 pytest>=8.0
 
-# Only needed to regenerate validation/baselines/ from the Excel workbook.
-# Requires Excel on Windows. The committed baselines mean day-to-day
-# validation does not need this.
+# Optional, and Windows-only. Needed ONLY to regenerate validation/baselines/
+# from the original Excel workbook, which requires Excel installed. The
+# baselines are committed, so validation and the tests run without this on any
+# platform. pip will simply skip this line on macOS and Linux.
 pywin32>=306 ; sys_platform == "win32"
