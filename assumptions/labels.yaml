@@ -76,6 +76,10 @@ tontine_fund:
     label: "Target coverage of technical provisions (runoff mode)"
     unit: "x"
     row: 0
+  pf_release_glide_years:
+    label: "Years over which excess coverage is worked off (runoff mode)"
+    unit: "years"
+    row: 0
   pf_release_rate:
     label: "Annual release rate"
     unit: "% of outstanding balance p.a."

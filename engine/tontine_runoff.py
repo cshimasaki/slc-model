@@ -143,6 +143,7 @@ def release_for_year(
     cumulative_raised: float,
     fund_year: int,
     coverage_target: float,
+    glide_years: int,
     model_year: int,
     release_start_year: int,
 ) -> float:
@@ -155,6 +156,29 @@ def release_for_year(
     `fund_year` is years since the first drawdown, which is what indexes the
     actuarial curve. It is not the model year: if the fund first draws in model
     year 1, the two differ by one, and if it never draws they are unrelated.
+
+    The release has two parts, and the split is the whole design.
+
+    1. **Tracking.** Discharge the same *proportion* the liability itself fell
+       by this year. This is what "tracks the run-off" has to mean: the charge
+       declines in step with the obligation it secures, smoothly, with no
+       schedule of its own.
+
+    2. **Glide.** Any coverage above target is worked off over `glide_years`,
+       not corrected in one go.
+
+    Part 2 exists because of a bug this rule had first. Releasing straight down
+    to target snapped fifteen years of accumulated over-coverage into a single
+    year -- £9.3m discharged at once at year 25, against £150k a year after.
+    That is not tracking anything; it is a level target with a cliff in it, and
+    it is not a discharge any lender or registrar would recognise.
+
+    The cause is structural rather than arithmetic: the liability peaks around
+    fund year 9 and runs off from there, but policy blocks any release until
+    year 25. Sixteen years of divergence accrue before the rule is allowed to
+    act. Gliding spreads that backlog; starting the release nearer the
+    liability peak would avoid creating it at all, but that is a policy choice
+    and belongs to whoever sets `pf_release_start_yr`.
     """
     if model_year < release_start_year:
         return 0.0
@@ -166,12 +190,21 @@ def release_for_year(
         return 0.0
 
     # Scale the actuarial curve to the capital this model actually raised.
-    technical_provisions = curve.tp_at(fund_year) * cumulative_raised
-    target_outstanding = coverage_target * technical_provisions
+    tp_now = curve.tp_at(fund_year) * cumulative_raised
+    tp_prev = curve.tp_at(fund_year - 1) * cumulative_raised
 
-    # Release only the excess over target. Never negative: the rule discharges
-    # security, it never re-grants it.
-    excess = outstanding - target_outstanding
-    if excess <= 0:
+    # 1. Track: the proportion by which the liability fell this year.
+    if tp_prev > 0 and tp_now < tp_prev:
+        tracking = outstanding * (1 - tp_now / tp_prev)
+    else:
+        tracking = 0.0
+
+    # 2. Glide: work off any coverage above target gradually.
+    remaining = outstanding - tracking
+    excess = max(0.0, remaining - coverage_target * tp_now)
+    glide = excess / max(1, glide_years)
+
+    total = min(tracking + glide, outstanding)
+    if total <= 0:
         return 0.0
-    return -min(excess, outstanding)
+    return -total

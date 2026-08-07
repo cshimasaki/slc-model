@@ -212,6 +212,7 @@ def tontine(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
                 cumulative_raised=c.tf_cum_raised_closing[i],
                 fund_year=_fund_year(c, i),
                 coverage_target=a.pf_release_coverage_target,
+                glide_years=getattr(a, "pf_release_glide_years", 15),
                 model_year=year,
                 release_start_year=a.pf_release_start_yr,
             )
