@@ -152,6 +152,15 @@ class CapitalState:
     unfunded_requirement: list[float] = field(default_factory=_years)   # row 62
     dscr: list[float | str] = field(default_factory=_years)             # row 64
     reserve_cover: list[float | str] = field(default_factory=_years)    # row 65
+    # Added Aug 2026. Not in the workbook, so deliberately absent from
+    # ROW_MAP -- the Excel comparison cannot check what Excel never had.
+    #
+    # Row 64 is labelled DSCR but no principal is ever repaid, so it is an
+    # interest cover ratio. It also counts a donated house as income, which
+    # is right for the accounts and wrong for a covenant. These two strip
+    # that out, at two different levels of severity.
+    cash_interest_cover: list[float | str] = field(default_factory=_years)
+    rent_only_cover: list[float | str] = field(default_factory=_years)
 
     ROW_MAP = {
         10: "gifts_living", 11: "bequests", 12: "founding_capital", 13: "gift_aid",

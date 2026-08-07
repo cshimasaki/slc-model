@@ -308,6 +308,65 @@ rather than an observation about when first deaths occur.
 
 ---
 
+## Three interest cover tests replace one DSCR
+**Branch:** `structure/property-gifts` (folded in) · **Date:** 2026-08-07 · **Decision:** adopt
+
+**Hypothesis.** The single 1.20x covenant was self-imposed and, on inspection,
+measuring the wrong thing in two ways.
+
+**What the diagnosis found.**
+
+*It is not a DSCR.* Total principal repaid across 50 years is **£0** — the
+Tontine never amortises and the mortgage is undrawn. It is an interest cover
+ratio, and calling it DSCR invites comparison with geared commercial borrowers
+who carry refinancing and maturity risk that SLC does not.
+
+*It counts a house as income.* A donated property is recognised at market
+value, which is right for the accounts and wrong for a covenant. At year 16 a
+gift lifts cover from 1.24x to 2.29x; at year 20, 1.54x to 2.75x. Interest
+cannot be paid with a house.
+
+*And the real exposure was invisible.* Stripping gifts out entirely:
+
+| Measure | Worst |
+|---|---|
+| All income (the old metric) | 1.05 |
+| Excluding donated property | 1.05 |
+| **Rent only, no gifts** | **0.38** |
+
+**Rent alone does not cover interest until year 19.** For eighteen years the
+portfolio depends on non-contractual giving to service its debt. No covenant
+number fixes that; it was simply not being measured.
+
+**What changed.** Two new series — `cash_interest_cover` and
+`rent_only_cover` — computed in `capital_debt.coverage()`, carried through the
+JSON bundle, the explorer and the Excel workbook. Neither appears in `ROW_MAP`:
+the workbook never had them, so the Excel comparison cannot and should not
+check them.
+
+Thresholds moved out of code into an `assumptions/base.yaml` `covenants`
+section, because they are policy:
+
+- `cov_cash_cover_min: 1.25`
+- `cov_rent_only_min: 1.00`, `cov_rent_only_by_year: 20`
+- `cov_legacy_dscr_min: 1.20` (retained for continuity)
+
+The third test is the first measured under CPI +2pts rather than a separate
+ratio, because the coupon is CPI-linked and reprices immediately while rents
+review annually. Stress already is CPI +2, and **fails it at 0.73**.
+
+**Where the covenant level came from.** The structural case is for the lower
+half of the 1.10-1.50 range UK housing associations typically covenant: no
+maturity, no amortisation, no refinancing risk, and the liability extinguishes
+on death. What argues it back up is the gift dependency, single-locality
+concentration, and deliberately sub-market rents leaving little room to raise
+out of trouble. 1.25x is the balance of those.
+
+**Decision: adopt.** The headline number matters less than the second test,
+which is failing today for eighteen years and is the one to manage against.
+
+---
+
 ## Planned — not yet started
 
 Recorded 2026-08-07 from the design discussion, so the sequence is not lost.

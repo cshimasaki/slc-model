@@ -153,8 +153,14 @@ def _dashboard(wb: Workbook, result: ModelRun) -> None:
     row += 1
     ws.cell(row=row, column=1, value="Covenant position").font = Font(name=FONT, bold=True, size=11)
     row += 1
+    a = result.assumptions
     checks = [
-        ("Minimum DSCR", block["headline"]["min_dscr"]["value"], DSCR_COVENANT, "above", FMT_RATIO),
+        ("Minimum cash interest cover", block["headline"]["min_cash_cover"]["value"],
+         getattr(a, "cov_cash_cover_min", DSCR_COVENANT), "above", FMT_RATIO),
+        ("Minimum rent-only interest cover", block["headline"]["min_rent_only"]["value"],
+         getattr(a, "cov_rent_only_min", 1.0), "above", FMT_RATIO),
+        ("Minimum interest cover (all income, legacy)",
+         block["headline"]["min_dscr"]["value"], DSCR_COVENANT, "above", FMT_RATIO),
         ("Peak LTV", block["headline"]["max_ltv"]["value"],
          result.assumptions.pf_ltv_limit, "below", FMT_PCT),
         ("Minimum reserve cover", block["headline"]["min_reserve_cover"]["value"],
@@ -428,7 +434,9 @@ def _capital(wb: Workbook, result: ModelRun) -> None:
     row = _line(ws, row, "Target reserve", "£", c.target_reserve)
     row = _line(ws, row, "Minimum reserve covenant", "£", c.min_reserve_covenant)
     row = _line(ws, row, "Unfunded acquisition requirement", "£", c.unfunded_requirement)
-    row = _line(ws, row, "DSCR", "x", c.dscr, bold=True)
+    row = _line(ws, row, "Interest cover — all income", "x", c.dscr, bold=True)
+    row = _line(ws, row, "Interest cover — cash income", "x", c.cash_interest_cover, bold=True)
+    row = _line(ws, row, "Interest cover — rent only", "x", c.rent_only_cover, bold=True)
     row = _line(ws, row, "Reserve cover", "months", c.reserve_cover)
 
     _finish(ws, n, header_row)

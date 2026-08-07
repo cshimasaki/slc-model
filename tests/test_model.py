@@ -409,6 +409,56 @@ def test_release_never_fully_discharges_while_liability_remains():
             )
 
 
+# ------------------------------------------------------- interest cover ---
+
+@pytest.mark.parametrize("scenario", SCENARIOS)
+def test_cover_measures_are_ordered(scenario):
+    """
+    All-income >= cash >= rent-only, in every year, by construction.
+
+    Each strips out strictly more than the one before: cash removes donated
+    property, rent-only removes every gift. If that ordering ever inverted it
+    would mean a cover measure was including something it claims to exclude.
+    """
+    c = run(scenario).state.capital
+    for i, (allc, cash, rent) in enumerate(
+        zip(c.dscr, c.cash_interest_cover, c.rent_only_cover)
+    ):
+        if not isinstance(allc, (int, float)):
+            continue
+        assert allc >= cash - 1e-9, f"year {i + 1}: all-income cover below cash cover"
+        assert cash >= rent - 1e-9, f"year {i + 1}: cash cover below rent-only cover"
+
+
+def test_donated_property_lifts_all_income_cover_but_not_cash():
+    """
+    The reason cash cover exists.
+
+    A gifted house is income at market value, so it flatters the headline
+    ratio. It cannot be used to pay interest, so it must not flatter the
+    covenant test.
+    """
+    r = run("base")
+    c, A = r.state.capital, r.state.assets
+
+    gift_years = [i for i, v in enumerate(A.gift_property_value) if v > 0
+                  and isinstance(c.dscr[i], (int, float))]
+    assert gift_years, "no property gift arrived, so this test proves nothing"
+
+    i = gift_years[0]
+    assert c.dscr[i] > c.cash_interest_cover[i], (
+        "a donated house should lift all-income cover above cash cover"
+    )
+
+
+def test_covenant_thresholds_are_parameters_not_hardcoded():
+    """Self-imposed covenants must be visible and editable, not buried."""
+    a = load("base")
+    assert a.cov_cash_cover_min > 0
+    assert a.cov_rent_only_min > 0
+    assert 1 <= a.cov_rent_only_by_year <= 50
+
+
 # -------------------------------------------------------- excel semantics ---
 
 def test_excel_round_is_half_away_from_zero():

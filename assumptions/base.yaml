@@ -187,6 +187,36 @@ tax_gift_aid:
   gift_aid_toggle: 1             # Gift Aid applicable? (1 = Yes)
   gift_aid_rate: 0.25            # Gift Aid recovery rate (% of qualifying gifts)
 
+covenants:
+  # Self-imposed. There is no lender requiring these -- which makes stating
+  # them, and the reasoning, more important rather than less.
+  #
+  # Note what the Tontine is: interest-only, no maturity, no amortisation, and
+  # it extinguishes on death. Over 50 years the model repays GBP 0 of
+  # principal. So these are INTEREST cover tests, not debt-service cover, and
+  # the refinancing risk a geared commercial borrower carries is absent. UK
+  # housing associations typically covenant interest cover at 1.10-1.50; the
+  # structural case here is for the lower half of that range, and the gift
+  # dependency and single-locality concentration are what argue it back up.
+
+  # 1. Cash interest cover: rent plus CASH gifts and Gift Aid, over interest.
+  #    Excludes donated property -- income and an asset, but not money, and
+  #    interest cannot be paid with a house.
+  cov_cash_cover_min: 1.25
+
+  # 2. Rent-only interest cover: no gifts at all, contractual or not. Asks
+  #    whether the portfolio can service its own debt. This is the test that
+  #    actually disciplines the plan, and it is the one currently failing.
+  cov_rent_only_min: 1.00
+  cov_rent_only_by_year: 20     # year by which test 2 should be met
+
+  # 3. The third test is test 1 measured under a CPI +2pt world rather than a
+  #    separate ratio, because the coupon is CPI-linked and reprices at once
+  #    while rents review annually. The Stress scenario already is CPI +2.
+
+  # The original self-imposed figure, kept so the old series stays readable.
+  cov_legacy_dscr_min: 1.20
+
 funding_discipline:
   constrain_growth: 1            # Cap acquisitions at affordable level? (1 = Yes)
 

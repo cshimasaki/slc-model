@@ -351,6 +351,25 @@ tax_gift_aid:
     unit: "% of qualifying gifts"
     row: 87
 
+covenants:
+  _title: "Covenants (self-imposed)"
+  cov_cash_cover_min:
+    label: "Minimum cash interest cover (excludes donated property)"
+    unit: "x"
+    row: 0
+  cov_rent_only_min:
+    label: "Minimum rent-only interest cover (no gifts at all)"
+    unit: "x"
+    row: 0
+  cov_rent_only_by_year:
+    label: "Year by which rent-only cover should be met"
+    unit: "model year"
+    row: 0
+  cov_legacy_dscr_min:
+    label: "Original self-imposed DSCR minimum (legacy, for comparison)"
+    unit: "x"
+    row: 0
+
 funding_discipline:
   _title: "Acquisition Funding Discipline"
   constrain_growth:

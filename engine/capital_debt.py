@@ -312,6 +312,24 @@ def coverage(s: ModelState, i: int) -> None:
     if service <= 0:
         c.dscr.append("")                                                      # row 64
         c.reserve_cover.append("")                                             # row 65
+        c.cash_interest_cover.append("")
+        c.rent_only_cover.append("")
     else:
         c.dscr.append(s.statements.operating_surplus[i] / service)
         c.reserve_cover.append(s.statements.free_cash[i] / (service / 12))
+
+        # Cash cover: strip out donated property. It is income, and it is an
+        # asset, but it is not money -- interest cannot be paid with a house.
+        non_cash = s.assets.gift_property_value[i]
+        c.cash_interest_cover.append(
+            (s.statements.operating_surplus[i] - non_cash) / service
+        )
+
+        # Rent-only cover: strip out every gift, cash included. This asks the
+        # harder question -- can the portfolio service its own debt from the
+        # rent it earns, with no reliance on giving that nobody is obliged to
+        # continue?
+        all_gifts = s.statements.gifts_and_bequests[i] + s.statements.gift_aid[i]
+        c.rent_only_cover.append(
+            (s.statements.operating_surplus[i] - all_gifts) / service
+        )
