@@ -398,6 +398,35 @@ donor's lifetime, whether the RCO is a liability or equity, and how the
 inherited credit is extinguished. Questions raised with the design team
 2026-08-07.
 
+### Community share withdrawals are unrealistically smooth
+
+The mechanic is: withdrawals in year t = a fixed rate applied to the closing
+balance from `cs_withdrawal_years` ago. Because issuance is smooth, withdrawals
+come out as a smooth lagged echo of it — a clean curve where reality would be
+lumpy.
+
+Real withdrawals are driven by individual circumstances and are likely to
+*cluster*: after a life event, when confidence dips, or when a dividend is cut.
+The clustering is the part that matters, because withdrawals concentrating in a
+bad year is precisely when the Commons can least afford them, and the current
+mechanic cannot express that at all.
+
+Two candidate structural changes, neither yet attempted:
+
+- **Behavioural feedback.** Let the withdrawal rate respond to something the
+  model already knows — a dividend paid short of the declared rate is the
+  obvious trigger. Keeps the model deterministic and reproducible, which the
+  validation depends on.
+- **Explicit stress event.** A one-off withdrawal spike in a nominated year,
+  parameterised like the HPI shock, to size the liquidity risk directly.
+
+The second is probably more useful first: it answers "what if a fifth of
+withdrawable shares were called in the year after a bad result?" without
+pretending to predict when.
+
+Note the restriction period itself was wrong (5 years in the workbook, 2 in the
+actual offer terms) and is corrected in `base.yaml`.
+
 ### The leverage multiplier as a published figure
 
 "£20k of community shares releases £80k of pension capital" is a fundraising

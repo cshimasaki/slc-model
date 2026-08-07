@@ -89,7 +89,16 @@ community_shares:
   # total capital, and paying a dividend only out of available surplus.
   cs_dividend_rate: 0.03         # Default dividend rate (% p.a.)
   cs_max_pct_capital: 0.20       # Maximum issuance cap (% of total capital)
-  cs_withdrawal_years: 5         # Withdrawal restriction period (years)
+  # Withdrawal restriction period. The workbook had 5; the actual share offer
+  # terms are 2, corrected Aug 2026.
+  #
+  # Note what the model does with this: withdrawals each year are a fixed rate
+  # applied to the closing balance from this many years ago. That makes the
+  # withdrawal line a smooth, lagged echo of the issuance line. Real
+  # withdrawals will be lumpier -- driven by individual circumstances and
+  # likely to cluster if confidence dips or a dividend is cut. The smoothness
+  # is a property of the deterministic mechanic, not a forecast. See MODEL_LOG.
+  cs_withdrawal_years: 2
   cs_issue_cost_pct: 0.05        # Issuance / marketing cost (% of proceeds)
   cs_baseline_issue: 250000      # Baseline annual issuance, real (£ p.a.)
   cs_takeup_mult: 1.0            # Take-up multiplier (x)
