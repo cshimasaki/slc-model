@@ -11,6 +11,10 @@ number-for-number against it across all three scenarios.
 
 **→ [Open the interactive explorer](https://cshimasaki.github.io/slc-model/)**
 
+**New here, or catching up?** [CHANGES.md](CHANGES.md) summarises what has
+changed since the original spreadsheet and what the model now says — written
+to be read without opening any code.
+
 The badge above is not decoration: it goes red the moment the Python model
 stops reproducing the original spreadsheet, cell for cell, across all three
 scenarios.

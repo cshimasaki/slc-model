@@ -314,6 +314,12 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--border
 --------------------------------------------------------------------------- */
 const DataSource = {
   async load() {
+    // A standalone build inlines the bundle, so the page opens by
+    // double-clicking with no server. The served version fetches it instead,
+    // which is what lets GitHub Pages rebuild the data without touching the
+    // page. Same seam a live what-if API would replace.
+    if (window.__SLC_DATA) return window.__SLC_DATA;
+
     const res = await fetch("data.json", { cache: "no-cache" });
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
     return res.json();
