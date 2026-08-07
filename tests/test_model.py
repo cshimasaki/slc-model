@@ -189,6 +189,72 @@ def test_invariant_check_can_fail():
         _check_invariants(result.state, result.n_years, len(result.state.monthly.month))
 
 
+# ------------------------------------------------------ tontine release ---
+
+@pytest.mark.parametrize("scenario", SCENARIOS)
+def test_release_has_no_cliff(scenario):
+    """
+    Discharge must be gradual, not a step.
+
+    The first version of the run-off rule released straight down to its
+    coverage target the moment it was allowed to, discharging sixteen years of
+    accumulated over-coverage in one year -- £9.3m at year 25 against £150k a
+    year afterwards. No lender or registrar would recognise that as a
+    discharge, and it is not "tracking" anything.
+
+    Two things are asserted, because either alone can be satisfied by a wrong
+    rule: no single year may dominate the whole discharge, and no year may
+    dwarf the year before it.
+    """
+    from engine.assumptions import load
+
+    a = load(scenario)
+    a.values["pf_release_mode"] = "runoff"
+    c = run(a).state.capital
+
+    releases = [-v for v in c.tf_release if v < 0]
+    if not releases:
+        return  # scenario never draws Tontine capital
+
+    peak = max(c.tf_closing)
+    assert max(releases) < 0.40 * peak, (
+        f"a single year discharges {max(releases) / peak:.0%} of the peak balance"
+    )
+
+    for prev, nxt in zip(releases, releases[1:]):
+        if prev > 1000:
+            assert nxt < 3 * prev, (
+                f"release jumps from {prev:,.0f} to {nxt:,.0f} year on year"
+            )
+
+
+def test_release_never_fully_discharges_while_liability_remains():
+    """
+    The last-survivor floor, which is the point of the rule.
+
+    While technical provisions are positive there is someone left to be paid,
+    so some security must remain. This is structural rather than a threshold:
+    the target is a multiple of a liability that is only zero once nobody is
+    left.
+    """
+    from engine.assumptions import load
+    from engine.capital_debt import _fund_year
+    from engine.tontine_runoff import load_curve
+
+    a = load("base")
+    a.values["pf_release_mode"] = "runoff"
+    r = run(a)
+    c, curve = r.state.capital, load_curve()
+    first = next(i for i, d in enumerate(c.tf_drawdown) if d > 0)
+
+    for i in range(first, r.n_years):
+        tp = curve.tp_at(i - first)
+        if tp > 1e-6:
+            assert c.tf_closing[i] > 0, (
+                f"year {i + 1}: charge fully discharged while a liability remains"
+            )
+
+
 # -------------------------------------------------------- excel semantics ---
 
 def test_excel_round_is_half_away_from_zero():
