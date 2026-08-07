@@ -67,6 +67,15 @@ tontine_fund:
     label: "Release phase start year"
     unit: "model year"
     row: 20
+  pf_release_mode:
+    label: "Release rule (geometric = original workbook, runoff = tracks liability)"
+    unit: "text"
+    # No row in Control & Parameters: added Aug 2026, after the port.
+    row: 0
+  pf_release_coverage_target:
+    label: "Target coverage of technical provisions (runoff mode)"
+    unit: "x"
+    row: 0
   pf_release_rate:
     label: "Annual release rate"
     unit: "% of outstanding balance p.a."

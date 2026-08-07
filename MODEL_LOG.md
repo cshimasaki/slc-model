@@ -91,7 +91,111 @@ assumptions or the structure, not the arithmetic.
 
 ## Structural experiments
 
-_None yet. First entry goes below when the first `structure/` branch lands._
+## Tontine release tracks the liability run-off
+**Branch:** `structure/tontine-runoff-release` · **Date:** 2026-08-07 · **Decision:** adopt
+
+**Hypothesis.** The original release rule — a flat 6% of the outstanding
+balance from year 25 — is a parametric stand-in, not a mechanism. The
+indicative actuarial model (Aug 2026) found the binding constraint is not the
+release *start* date but its *completion* date: discharge the charges before
+the last annuitant dies and the survivors are left unbacked, which is terminal
+insolvency however healthy the fund looked at year 25. A rule that tracks the
+actual liability should remove that failure mode by construction.
+
+**What changed.** `engine/tontine_runoff.py` adds a second release rule,
+selected by `pf_release_mode`:
+
+```
+target outstanding(t) = pf_release_coverage_target x technical provisions(t)
+release(t)            = outstanding(t) - target outstanding(t), floored at 0
+```
+
+Technical provisions come from `assumptions/tontine_runoff.csv`, exported from
+the actuarial model and scaled to the capital this model actually raises.
+Because provisions are non-zero exactly while someone is left to be paid, the
+last-survivor floor is structural — there is no threshold to mis-set.
+
+`geometric` remains available and remains the default in
+`validation/port_reference/`, so the Excel comparison still passes unchanged.
+That is deliberate: it keeps port fidelity and the new mechanism independently
+verifiable, and it is what makes the two rules comparable at all.
+
+**Result.** `python validation/compare_release_rules.py`, all three scenarios.
+Base:
+
+| | geometric | runoff |
+|---|---|---|
+| Charge outstanding at Y50 | £3,875,804 (38% of peak) | £3,054 (0.0%) |
+| Total Tontine interest paid | £18,899,707 | £9,802,003 |
+| Properties at Y50 | 56 | 71 |
+| Cumulative retained surplus | £14,137,501 | £33,650,098 |
+| Net assets at Y50 | £70,724,013 | £97,849,486 |
+| Years below 1.20x covenant | 16 | 16 |
+
+Stress: covenant breaches fall from 34 years to 22. Optimistic: net assets
+£251.8m → £281.8m.
+
+The mechanism behind the size of the gain is worth stating, because £27m from a
+release-rule change looks implausible until traced. The geometric rule leaves
+SLC **paying coupon on a charge that should already have been discharged** —
+£9.1m of avoidable interest over 50 years. That saving compounds into retained
+surplus, and the lower balance frees LTV headroom, which buys 15 more homes,
+which adds £22.7m of portfolio value and £7.6m of revaluation reserve.
+
+Minimum DSCR is unchanged in every scenario, as expected: the release is a
+non-cash credit and does not touch debt service in the year it happens.
+
+**Decision: adopt**, with `pf_release_mode: runoff` as the live default.
+Two caveats recorded rather than buried:
+
+- The curve is **population mortality, not annuitant mortality**. Real
+  annuitants live longer, so the liability is understated and these figures are
+  a favourable bound. The September dataset replaces one CSV.
+- Scaling the curve by total capital raised assumes this model's drawdown has
+  the same *shape* as the indicative model's level £5m a year. Ours is
+  demand-driven and lumpier. Acceptable for a placeholder; revisit when the
+  real basis lands.
+
+---
+
+## Planned — not yet started
+
+Recorded 2026-08-07 from the design discussion, so the sequence is not lost.
+
+### The capital-mix transition (highest priority)
+
+Tontine is the booster rocket: it buys escape velocity, and should decline as a
+share of funding once the balance sheet and the evidence base can carry
+**community shares** (widely understood) and **Rent Credit Obligations**
+(novel). The model currently has no notion of this shift at all — each capital
+layer has fixed parameters and no trajectory.
+
+Needs: capital-layer weights that vary over time, with Base / Optimistic /
+Stress differing in *how fast* the transition happens, not just in levels. The
+LTV limit becomes part of that trajectory rather than a constant — high while
+Tontine-led, falling as equity-like capital takes over.
+
+### Rent Credit Obligations
+
+An owner of an unencumbered property transfers it to the commons, retains
+lifetime occupancy with maintenance provided, and receives an RCO that passes
+to their children on death.
+
+This is not a variant of an existing layer. It is capital contributed **in
+kind**, with a retained life interest, and an instrument that is inheritable
+and denominated in rent. Modelling it needs decisions this log cannot make:
+how the RCO is valued at issue, whether the property yields rent during the
+donor's lifetime, whether the RCO is a liability or equity, and how the
+inherited credit is extinguished. Questions raised with the design team
+2026-08-07.
+
+### The leverage multiplier as a published figure
+
+"£20k of community shares releases £80k of pension capital" is a fundraising
+message that falls straight out of the LTV relationship. Cheap to compute and
+publish in the explorer — for each £1 of community share, how much total
+capital is deployed. Worth doing once the transition work above settles what
+LTV is doing over time.
 
 <!--
 Template:

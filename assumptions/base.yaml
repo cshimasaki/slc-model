@@ -43,7 +43,28 @@ tontine_fund:
   pf_max_raise: 50000000         # Tontine maximum raise (£)
   pf_invest_phase_yrs: 10        # Investment phase duration (years) — drawdowns only within this window
   pf_release_start_yr: 25        # Release phase start (model year)
-  pf_release_rate: 0.06          # Annual release rate (% of outstanding balance p.a.)
+
+  # How the charge is discharged once the release phase begins.
+  #
+  #   geometric  the original workbook's rule: a flat percentage of the
+  #              outstanding balance each year. Decays but never reaches zero,
+  #              so more than a third is still outstanding at year 50.
+  #   runoff     discharge tracks the actuarial liability, holding a target
+  #              coverage multiple of technical provisions and never fully
+  #              discharging while an annuitant survives.
+  #
+  # The indicative actuarial model (Aug 2026) found that the binding constraint
+  # is the release COMPLETION date, not its start: discharging before the last
+  # annuitant dies leaves survivors unbacked. "runoff" removes that failure
+  # mode by construction rather than by tuning the rate.
+  pf_release_mode: runoff
+  pf_release_rate: 0.06          # geometric mode only: % of outstanding balance p.a.
+
+  # runoff mode only: multiple of technical provisions the charge should hold.
+  # The actuarial model found the fund collateralised at 2.13x its liabilities;
+  # this makes that ratio an explicit, tunable policy choice rather than an
+  # accident of the release schedule.
+  pf_release_coverage_target: 1.5
   pf_ltv_limit: 0.70             # LTV limit (% of portfolio value)
   pf_refi_toggle: 0              # Refinance into commercial mortgage? (1 = Yes)
   pf_refi_year: 26               # Refinancing year (model year)

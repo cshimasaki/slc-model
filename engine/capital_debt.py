@@ -26,10 +26,32 @@ normal loan in three ways:
 
 from __future__ import annotations
 
+from . import tontine_runoff
 from .assumptions import Assumptions
 from .excelfns import prior
 from .macro import MacroSeries
 from .state import ModelState
+
+# Loaded once. The curve is a fixed data file, not per-run state.
+try:
+    runoff_curve = tontine_runoff.load_curve()
+except tontine_runoff.RunoffError:  # pragma: no cover - only if the CSV is missing
+    runoff_curve = None
+
+
+def _fund_year(c, i: int) -> int:
+    """
+    Years since the Tontine first drew capital.
+
+    The actuarial curve is indexed from the fund's own first drawdown, which is
+    not the model year: the fund may not draw in year 1, and in scenarios where
+    it never draws there is no fund year at all. Returns -1 in that case, which
+    the curve reads as zero liability.
+    """
+    for k, drawn in enumerate(c.tf_drawdown):
+        if drawn > 0:
+            return i - k
+    return -1
 
 
 # ---------------------------------------------------------------- gifts ----
@@ -176,10 +198,29 @@ def tontine(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
 
     # Row 41: the tontine release. Negative -- it reduces the liability -- and
     # credited to reserves rather than paid in cash.
-    c.tf_release.append(
-        -(c.tf_indexed_opening[i] + c.tf_drawdown[i]) * a.pf_release_rate
-        if year >= a.pf_release_start_yr else 0.0
-    )
+    #
+    # Two rules are available. "geometric" is the original workbook's flat
+    # percentage of the outstanding balance, kept as the default so the model
+    # still reproduces the spreadsheet exactly. "runoff" tracks the actuarial
+    # liability instead; see engine/tontine_runoff.py for why that matters.
+    if getattr(a, "pf_release_mode", "geometric") == "runoff":
+        c.tf_release.append(
+            tontine_runoff.release_for_year(
+                curve=runoff_curve,
+                indexed_opening=c.tf_indexed_opening[i],
+                drawdown=c.tf_drawdown[i],
+                cumulative_raised=c.tf_cum_raised_closing[i],
+                fund_year=_fund_year(c, i),
+                coverage_target=a.pf_release_coverage_target,
+                model_year=year,
+                release_start_year=a.pf_release_start_yr,
+            )
+        )
+    else:
+        c.tf_release.append(
+            -(c.tf_indexed_opening[i] + c.tf_drawdown[i]) * a.pf_release_rate
+            if year >= a.pf_release_start_yr else 0.0
+        )
 
     # Row 42: on refinancing, the whole remaining balance moves to the mortgage.
     c.tf_transferred.append(
