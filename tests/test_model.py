@@ -343,9 +343,13 @@ def test_lockup_blocks_early_release():
     c = r.state.capital
     first_draw = next(i for i, d in enumerate(c.tf_drawdown) if d > 0)
 
+    # The release is a reconciling residual, so a genuine zero lands on
+    # floating-point dust rather than exactly 0.0. A fraction of a penny is
+    # noise; anything a person could see is not.
     for i in range(first_draw, first_draw + a.values["pf_lockup_years"]):
-        assert c.tf_release[i] == 0, (
-            f"a charge was released in year {i + 1}, inside the {a.values['pf_lockup_years']}-year lock-up"
+        assert abs(c.tf_release[i]) < 0.01, (
+            f"a charge was released in year {i + 1}, inside the "
+            f"{a.values['pf_lockup_years']}-year lock-up: {c.tf_release[i]:,.6f}"
         )
 
 
