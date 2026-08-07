@@ -45,12 +45,24 @@ def test_deltas_apply_over_base():
 
 
 def test_coupon_spread_is_derived_not_stored():
-    """Changing a component must move the coupon, as =SUM(E14:E16) does."""
+    """
+    Changing a component must move the coupon, as =SUM(E14:E16) does.
+
+    Deliberately asserts the *relationship*, never a literal total. Pinning the
+    total would make a legitimate pricing decision look like a broken test --
+    which is exactly what happened when the investor rate moved to 2.5%.
+    """
     a = load("base")
     assert a.pf_coupon_spread == pytest.approx(
         a.pf_investor_rate + a.pf_fund_op_margin + a.pf_fund_reg_charge
     )
-    assert a.pf_coupon_spread == pytest.approx(0.0375)
+
+    # And it is genuinely derived: move a component, the total follows.
+    bumped = load("base")
+    bumped.values["pf_investor_rate"] += 0.01
+    from engine.assumptions import _derive
+    _derive(bumped.values)
+    assert bumped.pf_coupon_spread == pytest.approx(a.pf_coupon_spread + 0.01)
 
 
 def test_labels_cover_every_parameter():
@@ -175,6 +187,420 @@ def test_invariant_check_can_fail():
     result.state.statements.balance_check[10] = 1.0
     with pytest.raises(ModelError, match="balance sheet does not balance"):
         _check_invariants(result.state, result.n_years, len(result.state.monthly.month))
+
+
+# ------------------------------------------------------- property gifts ---
+
+def test_gifts_wait_for_the_start_year():
+    """Nothing arrives before the Commons has earned it."""
+    r = run("base")
+    a = r.assumptions
+    for i in range(a.gift_property_start_yr - 1):
+        assert r.state.growth.properties_gifted[i] == 0, f"a gift arrived in year {i + 1}"
+    assert sum(r.state.growth.properties_gifted) > 0, "no gift ever arrived"
+
+
+def test_gifts_are_whole_houses_arriving_lumpily():
+    """
+    A rate of 0.5 means one house every other year, not half a house a year.
+
+    Fractional houses would be nonsense in themselves and would also break the
+    whole-number portfolio counts the rest of the model relies on.
+    """
+    r = run("base")
+    gifted = r.state.growth.properties_gifted
+    assert all(float(g).is_integer() for g in gifted), "a fractional house was gifted"
+
+    a = r.assumptions
+    span = len(gifted) - (a.gift_property_start_yr - 1)
+    expected = int(span * a.gift_property_rate)
+    assert abs(sum(gifted) - expected) <= 1, (
+        f"gifted {sum(gifted)} houses over {span} years at {a.gift_property_rate}/yr; "
+        f"expected about {expected}"
+    )
+
+
+def test_stress_never_receives_a_gift():
+    """Gifts are earned; the stress case is where the case is never made."""
+    r = run("stress")
+    assert sum(r.state.growth.properties_gifted) == 0
+
+
+def test_gifted_property_is_income_and_asset_but_never_cash():
+    """
+    The accounting that makes a gift honest.
+
+    A donated house has to be recognised as income, or it appears as an asset
+    with nothing on the other side and the balance sheet stops balancing. But
+    it must not touch cash. Getting one of those right and not the other is the
+    easy mistake, so both are asserted.
+    """
+    r = run("base")
+    A, f, g = r.state.assets, r.state.statements, r.state.growth
+
+    year = next(i for i, n in enumerate(g.properties_gifted) if n > 0)
+
+    assert A.gift_property_value[year] > 0
+    # Recognised in income...
+    assert f.gifts_and_bequests[year] >= A.gift_property_value[year]
+    # ...and removed again from the cash-flow statement.
+    assert f.cf_less_noncash_gifts[year] == pytest.approx(-A.gift_property_value[year])
+    # Never counted as money paid for property.
+    assert f.cf_property_purchases[year] == pytest.approx(-A.purchase_price[year])
+    assert A.purchase_price[year] == pytest.approx(
+        g.properties_acquired[year] * r.macro.avg_price[year]
+    )
+
+
+def test_gifts_do_not_consume_funding_capacity():
+    """
+    A house someone gives you is not something you can afford or not afford.
+
+    Gifts must bypass the affordability test entirely -- if they were netted
+    against funding capacity they would displace purchases rather than add to
+    them, and the whole point would be lost.
+    """
+    from engine.assumptions import load
+
+    without = load("base")
+    without.values["gift_property_start_yr"] = 0
+    withgifts = load("base")
+
+    a, b = run(without), run(withgifts)
+    assert sum(b.state.growth.properties_gifted) > 0
+
+    # In the first gift year the two runs are otherwise identical, so this
+    # isolates the question cleanly: the gift must not displace a purchase.
+    first = next(i for i, n in enumerate(b.state.growth.properties_gifted) if n > 0)
+    assert b.state.growth.properties_acquired[first] == a.state.growth.properties_acquired[first]
+    assert b.state.growth.properties_added[first] > a.state.growth.properties_added[first]
+
+    # Beyond that year the trajectories legitimately diverge -- a larger
+    # portfolio carries more admin and sinking-fund cost, and gifted houses
+    # need retrofitting -- so purchases in any single later year may be higher
+    # or lower. What must hold is the outcome.
+    assert b.state.growth.portfolio_closing[-1] > a.state.growth.portfolio_closing[-1]
+    assert b.state.statements.net_assets[-1] > a.state.statements.net_assets[-1]
+
+# ------------------------------------------------------ tontine release ---
+
+@pytest.mark.parametrize("scenario", SCENARIOS)
+def test_release_has_no_cliff(scenario):
+    """
+    Discharge must be gradual, not a step.
+
+    The first version of the run-off rule released straight down to its
+    coverage target the moment it was allowed to, discharging sixteen years of
+    accumulated over-coverage in one year -- £9.3m at year 25 against £150k a
+    year afterwards. No lender or registrar would recognise that as a
+    discharge, and it is not "tracking" anything.
+
+    Two things are asserted, because either alone can be satisfied by a wrong
+    rule: no single year may dominate the whole discharge, and no year may
+    dwarf the year before it.
+    """
+    from engine.assumptions import load
+
+    a = load(scenario)
+    a.values["pf_release_mode"] = "survivorship"
+    c = run(a).state.capital
+
+    releases = [-v for v in c.tf_release if v < 0]
+    if not releases:
+        return  # scenario never draws Tontine capital
+
+    peak = max(c.tf_closing)
+    assert max(releases) < 0.40 * peak, (
+        f"a single year discharges {max(releases) / peak:.0%} of the peak balance"
+    )
+
+    # And no year may discharge a large share of the balance standing at the
+    # time. Measuring against the balance rather than against the previous
+    # year's release is what distinguishes a cliff from a ramp: releases climb
+    # steeply early on as successive cohorts leave lock-up, which is correct
+    # and would trip a year-on-year ratio test for no good reason.
+    #
+    # Years where almost nothing is left are skipped: a 105-year-old really
+    # does have a very high annual mortality rate, so a big proportional
+    # release on a trivial balance is the model working, not failing.
+    for i, closing in enumerate(c.tf_closing):
+        pre_release = c.tf_indexed_opening[i] + c.tf_drawdown[i]
+        if pre_release <= 0.01 * peak:
+            continue
+        share = -c.tf_release[i] / pre_release
+        assert share < 0.40, (
+            f"year {i + 1} discharges {share:.0%} of the balance standing at the time"
+        )
+
+
+def test_lockup_blocks_early_release():
+    """No charge can be released inside its minimum term."""
+    from engine.assumptions import load
+
+    a = load("base")
+    a.values["pf_release_mode"] = "survivorship"
+    r = run(a)
+    c = r.state.capital
+    first_draw = next(i for i, d in enumerate(c.tf_drawdown) if d > 0)
+
+    # The release is a reconciling residual, so a genuine zero lands on
+    # floating-point dust rather than exactly 0.0. A fraction of a penny is
+    # noise; anything a person could see is not.
+    for i in range(first_draw, first_draw + a.values["pf_lockup_years"]):
+        assert abs(c.tf_release[i]) < 0.01, (
+            f"a charge was released in year {i + 1}, inside the "
+            f"{a.values['pf_lockup_years']}-year lock-up: {c.tf_release[i]:,.6f}"
+        )
+
+
+def test_mortality_gain_split_decides_who_benefits():
+    """
+    The undecided lever, pinned so its meaning cannot drift.
+
+    At 1.0 a dead investor's charge is extinguished and SLC's liability falls.
+    At 0.0 nothing is extinguished -- the entitlement passes to surviving
+    investors, so SLC owes exactly as much as before and pays exactly as much
+    interest. The difference between those two runs is the whole value of the
+    survivorship benefit, and which way it flows is a design decision, not a
+    modelling one.
+    """
+    from engine.assumptions import load
+
+    def run_with(share):
+        a = load("base")
+        a.values["pf_release_mode"] = "survivorship"
+        a.values["pf_mortality_gain_to_commons"] = share
+        return run(a, check=False)
+
+    to_commons, to_investors = run_with(1.0), run_with(0.0)
+
+    # All to the Commons: the charge runs off.
+    assert to_commons.state.capital.tf_closing[-1] < to_commons.state.capital.tf_closing[9]
+    # All to investors: nothing is ever released, so the balance only indexes
+    # up. The release is computed as a reconciling residual, so it lands on
+    # floating-point dust rather than a clean zero.
+    assert all(abs(v) < 1e-6 for v in to_investors.state.capital.tf_release)
+    assert to_investors.state.capital.tf_closing[-1] > to_investors.state.capital.tf_closing[9]
+
+    # And SLC pays materially more interest when the gain goes to investors.
+    assert -sum(to_investors.state.capital.tf_interest) > -sum(to_commons.state.capital.tf_interest)
+
+
+def test_release_never_fully_discharges_while_liability_remains():
+    """
+    The last-survivor floor, which is the point of the rule.
+
+    While technical provisions are positive there is someone left to be paid,
+    so some security must remain. This is structural rather than a threshold:
+    the target is a multiple of a liability that is only zero once nobody is
+    left.
+    """
+    from engine.assumptions import load
+    from engine.capital_debt import _fund_year
+    from engine.tontine_runoff import load_curve
+
+    a = load("base")
+    a.values["pf_release_mode"] = "survivorship"
+    r = run(a)
+    c, curve = r.state.capital, load_curve()
+    first = next(i for i, d in enumerate(c.tf_drawdown) if d > 0)
+
+    for i in range(first, r.n_years):
+        tp = curve.tp_at(i - first)
+        if tp > 1e-6:
+            assert c.tf_closing[i] > 0, (
+                f"year {i + 1}: charge fully discharged while a liability remains"
+            )
+
+
+def test_coupon_basis_delivers_the_designed_investor_return():
+    """
+    The investor must receive the real return the design specifies.
+
+    The principal is CPI-uplifted and never repaid, so the investor's entire
+    return is the coupon paid on a base that already grows with inflation.
+    Their inflation protection is therefore delivered by the indexation, and
+    the coupon should be the real spread alone.
+
+    The workbook added CPI to the rate as well, handing the investor CPI twice
+    and doubling their real return. This test is what stops that returning.
+    """
+    from engine.assumptions import load
+
+    a = load("base")
+    assert a.pf_coupon_basis == "real"
+    r = run(a)
+    m, c = r.macro, r.state.capital
+
+    # Under "real" the coupon is the spread, flat, whatever CPI does.
+    for i, rate in enumerate(c.tf_coupon_rate):
+        assert rate == pytest.approx(a.pf_coupon_spread), f"year {i + 1}"
+
+    # And the real return to the investor is the designed annuity rate.
+    real_return = a.pf_coupon_spread - a.pf_fund_op_margin - a.pf_fund_reg_charge
+    assert real_return == pytest.approx(a.pf_investor_rate)
+
+    # The workbook basis pays strictly more, and CPI more.
+    b = load("base")
+    b.values["pf_coupon_basis"] = "nominal"
+    nominal = run(b)
+    assert nominal.state.capital.tf_coupon_rate[0] == pytest.approx(
+        a.pf_coupon_spread + m.cpi_rate[0]
+    )
+    assert -sum(nominal.state.capital.tf_interest) > -sum(c.tf_interest)
+
+
+def test_every_input_file_is_tracked_by_git():
+    """
+    A file the model needs must be in the repo, not just on someone's disk.
+
+    This has now bitten twice. A broad `*.xlsx` rule swallowed the source
+    workbook, and a broad `*.csv` rule swallowed the Tontine run-off curve --
+    both source data sitting behind extension rules aimed at generated
+    exports. Locally everything works; a fresh clone fails, and the error
+    surfaces far from its cause.
+
+    Rather than list files, this asks git directly whether anything the engine
+    loads is being ignored.
+    """
+    import subprocess
+
+    inputs = [
+        os.path.join("assumptions", "base.yaml"),
+        os.path.join("assumptions", "optimistic.yaml"),
+        os.path.join("assumptions", "stress.yaml"),
+        os.path.join("assumptions", "labels.yaml"),
+        os.path.join("assumptions", "tontine_runoff.csv"),
+        os.path.join("validation", "port_reference", "base.yaml"),
+    ]
+
+    try:
+        tracked = subprocess.run(
+            ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
+        ).stdout.splitlines()
+    except (subprocess.CalledProcessError, FileNotFoundError):  # pragma: no cover
+        pytest.skip("git not available")
+
+    tracked = {line.replace("/", os.sep) for line in tracked if line}
+    for path in inputs:
+        assert os.path.exists(os.path.join(ROOT, path)), f"missing input file: {path}"
+        assert path in tracked, (
+            f"{path} exists locally but git is not tracking it -- a fresh clone "
+            f"would fail. Check .gitignore for a broad extension rule."
+        )
+
+
+# --------------------------------------------------- operating efficiency ---
+
+def test_efficiency_curve_shape():
+    """Falls with scale, monotonically, and stops at the floor."""
+    from engine.efficiency import scale_factor
+
+    rate, floor = 0.92, 0.65
+    factors = [scale_factor(n, rate, floor) for n in (1, 2, 5, 10, 25, 50, 200)]
+
+    assert factors[0] == 1.0, "a single property has no scale to exploit"
+    assert all(b <= a for a, b in zip(factors, factors[1:])), "cost per property rose with scale"
+    assert min(factors) >= floor
+    # Each doubling takes the stated proportion off, until the floor bites.
+    assert scale_factor(2, rate, 0.0) == pytest.approx(rate)
+    assert scale_factor(4, rate, 0.0) == pytest.approx(rate ** 2)
+
+
+def test_efficiency_can_be_switched_off():
+    """A learning rate of 1.0 means no scale economies at all."""
+    from engine.efficiency import scale_factor
+
+    assert all(scale_factor(n, 1.0, 0.65) == 1.0 for n in (1, 10, 200))
+
+
+def test_efficiency_lowers_running_costs_but_not_the_sinking_fund():
+    """
+    The saving applies to running costs, never to the provision.
+
+    A sinking fund contribution is money set aside against future capital
+    works. Buying scaffolding more cheaply does not mean the roof needs
+    replacing less often, so scaling the provision with estate size would
+    quietly under-provision a growing portfolio.
+    """
+    from engine.assumptions import load
+
+    off = load("base")
+    off.values["opex_learning_rate"] = 1.0
+    on = load("base")
+
+    a, b = run(off), run(on)
+
+    # Running costs fall...
+    assert sum(b.state.growth.admin_variable) < sum(a.state.growth.admin_variable)
+    assert sum(-v for v in b.state.assets.maintenance_spend) < sum(
+        -v for v in a.state.assets.maintenance_spend
+    )
+    # ...the provision does not, at equal portfolio size.
+    for i, (x, y) in enumerate(
+        zip(a.state.growth.portfolio_closing, b.state.growth.portfolio_closing)
+    ):
+        if x == y:
+            assert a.state.assets.sinking_contribution[i] == pytest.approx(
+                b.state.assets.sinking_contribution[i]
+            ), f"year {i + 1}: the sinking fund provision was scaled by efficiency"
+
+
+def test_stress_assumes_no_efficiency_gain():
+    """Stress is the world where the savings never materialise."""
+    from engine.assumptions import load
+
+    assert load("stress").opex_learning_rate == 1.0
+
+
+# ------------------------------------------------------- interest cover ---
+
+@pytest.mark.parametrize("scenario", SCENARIOS)
+def test_cover_measures_are_ordered(scenario):
+    """
+    All-income >= cash >= rent-only, in every year, by construction.
+
+    Each strips out strictly more than the one before: cash removes donated
+    property, rent-only removes every gift. If that ordering ever inverted it
+    would mean a cover measure was including something it claims to exclude.
+    """
+    c = run(scenario).state.capital
+    for i, (allc, cash, rent) in enumerate(
+        zip(c.dscr, c.cash_interest_cover, c.rent_only_cover)
+    ):
+        if not isinstance(allc, (int, float)):
+            continue
+        assert allc >= cash - 1e-9, f"year {i + 1}: all-income cover below cash cover"
+        assert cash >= rent - 1e-9, f"year {i + 1}: cash cover below rent-only cover"
+
+
+def test_donated_property_lifts_all_income_cover_but_not_cash():
+    """
+    The reason cash cover exists.
+
+    A gifted house is income at market value, so it flatters the headline
+    ratio. It cannot be used to pay interest, so it must not flatter the
+    covenant test.
+    """
+    r = run("base")
+    c, A = r.state.capital, r.state.assets
+
+    gift_years = [i for i, v in enumerate(A.gift_property_value) if v > 0
+                  and isinstance(c.dscr[i], (int, float))]
+    assert gift_years, "no property gift arrived, so this test proves nothing"
+
+    i = gift_years[0]
+    assert c.dscr[i] > c.cash_interest_cover[i], (
+        "a donated house should lift all-income cover above cash cover"
+    )
+
+
+def test_covenant_thresholds_are_parameters_not_hardcoded():
+    """Self-imposed covenants must be visible and editable, not buried."""
+    a = load("base")
+    assert a.cov_cash_cover_min > 0
+    assert a.cov_rent_only_min > 0
+    assert 1 <= a.cov_rent_only_by_year <= 50
 
 
 # -------------------------------------------------------- excel semantics ---

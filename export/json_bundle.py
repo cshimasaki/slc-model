@@ -25,9 +25,9 @@ from .series import CHARTS, HEADLINES, SERIES, SERIES_BY_KEY
 
 SCENARIOS = ["base", "optimistic", "stress"]
 
-# The DSCR covenant is a reporting threshold from the workbook's Dashboard
-# health check rather than a Control & Parameters input, so it has no named
-# range to read. Kept here, next to the chart that draws it.
+# Covenant thresholds now live in assumptions/base.yaml under `covenants`,
+# because they are policy rather than reporting furniture. Kept as a fallback
+# for the frozen port reference, which predates that section.
 DSCR_COVENANT = 1.20
 DSCR_TARGET = 1.50
 
@@ -118,9 +118,35 @@ def build_scenario_block(result: ModelRun) -> dict[str, Any]:
 
     # Counts that need a threshold, so they can't come from the generic
     # headline reduction above.
+    a = result.assumptions
+    cash_min = getattr(a, "cov_cash_cover_min", DSCR_COVENANT)
+    rent_min = getattr(a, "cov_rent_only_min", 1.0)
+    rent_by = getattr(a, "cov_rent_only_by_year", 20)
+
+    cash = _numeric(series["cash_interest_cover"])
+    headline["years_cash_cover_breach"] = {
+        "label": f"Years cash cover below {cash_min:.2f}x",
+        "value": sum(1 for v in cash if v < cash_min),
+        "unit": "count",
+    }
+
+    # When does the portfolio start paying its own interest from rent? The
+    # single most useful number on this page, and the one currently furthest
+    # from where it should be.
+    first_self = None
+    for idx, v in enumerate(series["rent_only_cover"]):
+        if v is not None and v >= rent_min:
+            first_self = idx + 1
+            break
+    headline["first_self_financing_year"] = {
+        "label": f"First year rent alone covers interest (target: by {rent_by})",
+        "value": first_self,
+        "unit": "count",
+    }
+
     dscr = _numeric(series["dscr"])
     headline["years_dscr_breach"] = {
-        "label": f"Years DSCR below {DSCR_COVENANT:.2f}x covenant",
+        "label": f"Years all-income cover below {DSCR_COVENANT:.2f}x (legacy)",
         "value": sum(1 for v in dscr if v < DSCR_COVENANT),
         "unit": "count",
     }
@@ -156,6 +182,9 @@ def build_scenario_block(result: ModelRun) -> dict[str, Any]:
             "pf_ltv_limit": result.assumptions.pf_ltv_limit,
             "__dscr_covenant": DSCR_COVENANT,
             "__dscr_target": DSCR_TARGET,
+            "__cash_cover_min": getattr(result.assumptions, "cov_cash_cover_min", DSCR_COVENANT),
+            "__rent_only_min": getattr(result.assumptions, "cov_rent_only_min", 1.0),
+            "__rent_only_by": getattr(result.assumptions, "cov_rent_only_by_year", 20),
             "min_cash_buffer": result.assumptions.min_cash_buffer,
         },
     }

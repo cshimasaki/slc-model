@@ -17,6 +17,7 @@ Cohort values follow house prices; cohort rents follow rent inflation.
 
 from __future__ import annotations
 
+from . import efficiency
 from .assumptions import Assumptions
 from .excelfns import prior
 from .macro import MacroSeries
@@ -37,7 +38,9 @@ def cohorts(s: ModelState, a: Assumptions, m: MacroSeries, i: int, n_years: int)
     compounded thereafter.
     """
     A = s.assets
-    acquired = s.growth.properties_acquired[i]
+    # Gifted houses join the portfolio on the same terms as bought ones: same
+    # market value, same rent, same indexation. Only the cash cost differs.
+    acquired = s.growth.properties_added[i]
 
     for k in range(n_years):
         start = k + 1          # the model year this cohort was acquired
@@ -62,10 +65,14 @@ def totals(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
 
     A.portfolio_value.append(sum(c[i] for c in A.cohort_value))          # row 61
 
-    # Row 62: this year's acquisition spend. The sheet computes this
-    # independently of the cohort rows rather than reading the active cohort;
-    # both routes must agree, and model.py asserts that they do.
-    A.additions_at_cost.append(s.growth.properties_acquired[i] * m.avg_price[i])
+    # Row 62: the VALUE added to the portfolio this year, gifts included. This
+    # is what row 63 strips out to isolate revaluation, so leaving gifts out
+    # would misreport a donated house as a house-price gain.
+    A.additions_at_cost.append(s.growth.properties_added[i] * m.avg_price[i])
+
+    # The gifted share of that, kept separately: it is income and an asset, but
+    # never cash, and the statements have to treat it accordingly.
+    A.gift_property_value.append(s.growth.properties_gifted[i] * m.avg_price[i])
 
     # Row 63: the revaluation gain is what is left after stripping out the
     # prior year's portfolio and this year's purchases -- i.e. pure movement in
@@ -92,13 +99,26 @@ def acquisition_costs(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> 
     unlike the sinking fund below which is charged on the whole portfolio.
     """
     A = s.assets
-    acquired = s.growth.properties_acquired[i]
+    purchased = s.growth.properties_acquired[i]
+    gifted = s.growth.properties_gifted[i]
+    added = s.growth.properties_added[i]
 
-    A.purchase_price.append(A.additions_at_cost[i])                      # row 122
+    # Row 122: cash actually paid for property. Gifts cost nothing, so this is
+    # purchases only -- the one place where the two genuinely diverge.
+    A.purchase_price.append(purchased * m.avg_price[i])
     A.sdlt.append(A.purchase_price[i] * a.sdlt_rate)                     # row 123
-    A.conveyancing.append(acquired * a.conveyancing * m.cost_index[i])   # row 124
-    A.surveys.append(acquired * a.survey_cost * m.cost_index[i])         # row 125
-    A.retrofit.append(acquired * a.retrofit_cost * m.cost_index[i])      # row 126
+
+    # A gifted house still has to be conveyed and surveyed.
+    A.conveyancing.append(added * a.conveyancing * m.cost_index[i])      # row 124
+    A.surveys.append(added * a.survey_cost * m.cost_index[i])            # row 125
+
+    # Row 126: retrofit. Gifted stock tends to be older and to need more work
+    # than a property chosen and bought on the market, so it carries a
+    # multiple of the standard cost.
+    gift_mult = getattr(a, "gift_property_retrofit_mult", 1.0)
+    A.retrofit.append(
+        (purchased + gifted * gift_mult) * a.retrofit_cost * m.cost_index[i]
+    )
     A.transaction_costs.append(                                          # row 127
         A.sdlt[i] + A.conveyancing[i] + A.surveys[i] + A.retrofit[i]
     )
@@ -123,8 +143,16 @@ def sinking_fund(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
         a.sinking_per_prop * s.growth.portfolio_closing[i] * m.cost_index[i]
     )
     A.sinking_return.append(A.sinking_opening[i] * a.sinking_return)     # row 133
-    A.maintenance_spend.append(                                          # row 134 (negative)
-        -a.maint_per_prop * s.growth.portfolio_closing[i] * m.cost_index[i]
+    # Row 134: negative. Also scaled by estate size -- bulk materials, gas
+    # safety checks batched across a round of properties rather than booked
+    # singly, and enough contracted volume to negotiate on price.
+    #
+    # The sinking fund CONTRIBUTION above is deliberately not scaled: it is a
+    # provision against future capital works, not a running cost, and the roof
+    # still needs replacing whatever the estate paid for the scaffolding.
+    scale = efficiency.factor_for(a, s.growth.portfolio_closing[i])
+    A.maintenance_spend.append(
+        -a.maint_per_prop * scale * s.growth.portfolio_closing[i] * m.cost_index[i]
     )
     A.sinking_closing.append(                                            # row 135
         A.sinking_opening[i] + A.sinking_contribution[i]

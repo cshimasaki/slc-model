@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import math
 
+from . import efficiency
 from .assumptions import Assumptions
 from .excelfns import excel_int, excel_round, prior
 from .macro import MacroSeries
@@ -141,11 +142,39 @@ def growth_curve(s: ModelState, a: Assumptions, i: int) -> None:
     )
 
 
-def acquisitions(s: ModelState, i: int) -> None:
-    """Rows 10-11 -- take the lower of want and can, and roll the portfolio."""
+def acquisitions(s: ModelState, a: Assumptions, i: int) -> None:
+    """
+    Rows 10-11 -- take the lower of want and can, then add any gifts.
+
+    Purchases are the lower of the growth curve and what the funding affords.
+    Gifted properties are neither: nobody's affordability test applies to a
+    house someone gives you, and no growth curve produces one. They arrive on
+    their own terms and are simply added.
+
+    That is also why they compound so strongly. A gift raises the portfolio
+    value, which raises next year's LTV headroom, which buys more houses --
+    without ever having consumed funding capacity itself.
+    """
     g = s.growth
+    year = i + 1
+
     g.properties_acquired.append(min(g.curve_properties[i], g.affordable_properties[i]))
-    g.portfolio_closing.append(g.portfolio_opening[i] + g.properties_acquired[i])
+
+    # Fractional entitlement accumulates until it crosses a whole house, so a
+    # rate of 0.5 means one house every other year rather than half a house
+    # every year. Portfolio counts stay whole numbers.
+    start = getattr(a, "gift_property_start_yr", 0)
+    rate = getattr(a, "gift_property_rate", 0.0)
+    if start and rate > 0 and year >= start:
+        earned = (year - start + 1) * rate
+        already = sum(g.properties_gifted)
+        gifted = float(int(earned - already))
+    else:
+        gifted = 0.0
+    g.properties_gifted.append(max(0.0, gifted))
+
+    g.properties_added.append(g.properties_acquired[i] + g.properties_gifted[i])
+    g.portfolio_closing.append(g.portfolio_opening[i] + g.properties_added[i])
 
 
 def admin_costs(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
@@ -173,7 +202,14 @@ def admin_costs(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
 
     # Row 19: charged on the closing portfolio, so properties bought this year
     # carry a full year of admin even though they may complete in month 12.
-    g.admin_variable.append(a.admin_per_prop * g.portfolio_closing[i] * m.cost_index[i])
+    #
+    # Scaled down as the estate grows: administering fifty houses costs less
+    # per house than administering five. See engine/efficiency.py.
+    scale = efficiency.factor_for(a, g.portfolio_closing[i])
+    g.admin_variable.append(
+        a.admin_per_prop * scale * g.portfolio_closing[i] * m.cost_index[i]
+    )
+    g.opex_scale_factor.append(scale)
 
     g.admin_total.append(                                                # row 20
         g.admin_board[i] + g.admin_accounting[i] + g.admin_fca[i]

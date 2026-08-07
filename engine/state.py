@@ -22,8 +22,13 @@ class GrowthState:
     """Growth Engine sheet."""
 
     portfolio_opening: list[float] = field(default_factory=_years)      # row 9
-    properties_acquired: list[float] = field(default_factory=_years)    # row 10
+    properties_acquired: list[float] = field(default_factory=_years)    # row 10 (purchased)
     portfolio_closing: list[float] = field(default_factory=_years)      # row 11
+    # Added after the port: properties given to the Commons outright. Not in
+    # the workbook, so they carry no source row and are excluded from the Excel
+    # comparison -- which is correct, since the workbook cannot represent them.
+    properties_gifted: list[float] = field(default_factory=_years)
+    properties_added: list[float] = field(default_factory=_years)       # purchased + gifted
     ramp_factor: list[float] = field(default_factory=_years)            # row 14
     admin_board: list[float] = field(default_factory=_years)            # row 15
     admin_accounting: list[float] = field(default_factory=_years)       # row 16
@@ -36,6 +41,9 @@ class GrowthState:
     affordable_properties: list[float] = field(default_factory=_years)  # row 25
     curve_properties: list[float] = field(default_factory=_years)       # row 26
     tontine_available: list[float] = field(default_factory=_years)      # row 27
+    # Added Aug 2026: the scale-efficiency multiplier on per-property
+    # operating costs. Not in the workbook, so absent from ROW_MAP.
+    opex_scale_factor: list[float] = field(default_factory=_years)
 
     ROW_MAP = {
         9: "portfolio_opening", 10: "properties_acquired", 11: "portfolio_closing",
@@ -72,6 +80,9 @@ class AssetState:
     sinking_return: list[float] = field(default_factory=_years)         # row 133
     maintenance_spend: list[float] = field(default_factory=_years)      # row 134
     sinking_closing: list[float] = field(default_factory=_years)        # row 135
+    # Market value of properties received as gifts. Adds to the portfolio and
+    # to income, but never to cash.
+    gift_property_value: list[float] = field(default_factory=_years)
 
     ROW_MAP = {
         61: "portfolio_value", 62: "additions_at_cost", 63: "revaluation_gain",
@@ -144,6 +155,15 @@ class CapitalState:
     unfunded_requirement: list[float] = field(default_factory=_years)   # row 62
     dscr: list[float | str] = field(default_factory=_years)             # row 64
     reserve_cover: list[float | str] = field(default_factory=_years)    # row 65
+    # Added Aug 2026. Not in the workbook, so deliberately absent from
+    # ROW_MAP -- the Excel comparison cannot check what Excel never had.
+    #
+    # Row 64 is labelled DSCR but no principal is ever repaid, so it is an
+    # interest cover ratio. It also counts a donated house as income, which
+    # is right for the accounts and wrong for a covenant. These two strip
+    # that out, at two different levels of severity.
+    cash_interest_cover: list[float | str] = field(default_factory=_years)
+    rent_only_cover: list[float | str] = field(default_factory=_years)
 
     ROW_MAP = {
         10: "gifts_living", 11: "bequests", 12: "founding_capital", 13: "gift_aid",
@@ -224,6 +244,10 @@ class StatementState:
     cash_closing: list[float] = field(default_factory=_years)           # row 63
     less_sinking_earmark: list[float] = field(default_factory=_years)   # row 64
     free_cash: list[float] = field(default_factory=_years)              # row 65
+    # Property gifts are income but never cash, so they are stripped back out
+    # of the cash-flow statement -- the same treatment the Tontine indexation
+    # uplift gets. Added after the port; no workbook row.
+    cf_less_noncash_gifts: list[float] = field(default_factory=_years)
 
     # Memorandum
     memo_shares_raised: list[float] = field(default_factory=_years)     # row 68

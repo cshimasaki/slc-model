@@ -67,7 +67,11 @@ def test_validator_detects_drift():
     with open(os.path.join(compare.BASELINE_DIR, "base.json"), encoding="utf-8") as f:
         baseline = json.load(f)
 
-    a = load("base")
+    # Perturb the FROZEN port-time assumptions, not the live ones. Starting
+    # from the live assumptions would mismatch anyway -- they have moved on
+    # from the workbook by design -- so the test would pass without proving
+    # anything about the harness.
+    a = load("base", assumptions_dir=compare.PORT_REFERENCE_DIR)
     a.values["void_rate"] *= 1.001
     result = run(a, check=False)
 
@@ -94,6 +98,39 @@ def test_validator_detects_drift():
         "a 0.1% change to void_rate produced no mismatches -- "
         "the validation harness cannot detect drift"
     )
+
+
+@requires_baselines
+def test_excel_check_survives_assumption_changes():
+    """
+    Changing a project assumption must NOT break the Excel comparison.
+
+    This is the whole point of freezing the port-time inputs. The workbook is a
+    fixed artefact; the project's assumptions are not. If tuning an assumption
+    turned the validation red, people would learn to ignore it, and the next
+    genuine translation bug would arrive to an audience that had stopped
+    reading the signal.
+    """
+    live = load("base")
+    frozen = load("base", assumptions_dir=compare.PORT_REFERENCE_DIR)
+
+    assert live.pf_investor_rate != frozen.pf_investor_rate, (
+        "this test is vacuous unless the live assumptions have actually moved "
+        "away from the frozen port-time ones"
+    )
+
+    mismatches, cov = compare.compare_scenario("base")
+    assert not mismatches, "the Excel check must not depend on live assumptions"
+    assert cov.cells > 10000
+
+
+def test_port_reference_is_complete():
+    """Every scenario the comparison checks must have a frozen input file."""
+    for scenario in SCENARIOS:
+        path = os.path.join(compare.PORT_REFERENCE_DIR, f"{scenario}.yaml")
+        assert os.path.exists(path), f"missing frozen assumptions for {scenario}"
+        loaded = load(scenario, assumptions_dir=compare.PORT_REFERENCE_DIR)
+        assert loaded.pf_max_raise > 0
 
 
 def test_values_match_tolerates_only_float_noise():

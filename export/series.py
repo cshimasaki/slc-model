@@ -55,8 +55,13 @@ SERIES: list[Series] = [
     Series("total_debt", "Total debt outstanding", "capital.total_debt", "£"),
     Series("ltv", "Loan-to-value", "capital.ltv", "%"),
     Series("total_debt_service", "Total debt service", "capital.total_debt_service", "£"),
-    Series("dscr", "DSCR", "capital.dscr", "x",
-           "Operating surplus divided by debt service. Blank in years with no debt."),
+    Series("dscr", "Interest cover — all income", "capital.dscr", "x",
+           "The workbook's DSCR row. No principal is ever repaid, so this is "
+           "interest cover; it also counts a donated house as income."),
+    Series("cash_interest_cover", "Interest cover — cash income", "capital.cash_interest_cover", "x",
+           "Excludes donated property: an asset, but not money to pay interest with."),
+    Series("rent_only_cover", "Interest cover — rent only", "capital.rent_only_cover", "x",
+           "No gifts at all. Asks whether the portfolio can service its own debt."),
 
     # Reserves
     Series("target_reserve", "Target reserve", "capital.target_reserve", "£"),
@@ -121,10 +126,13 @@ CHARTS: list[Chart] = [
     Chart("ltv", "LTV against the limit",
           ["ltv"], "%", reference=["pf_ltv_limit"],
           caption="Where the line meets the limit, the LTV cap is what stopped further acquisitions."),
-    Chart("dscr", "Debt service cover",
-          ["dscr"], "x", reference=["__dscr_covenant"],
-          caption="Operating surplus over debt service. Below 1.0× the surplus does not cover "
-                  "debt service at all."),
+    Chart("interest_cover", "Interest cover, three ways",
+          ["dscr", "cash_interest_cover", "rent_only_cover"], "x",
+          reference=["__cash_cover_min", "__rent_only_min"],
+          caption="Three lines, three different questions. All-income counts a donated house "
+                  "as income; cash income does not; rent-only asks whether the portfolio "
+                  "services its own debt with no gifts at all. The gap between top and bottom "
+                  "is the reliance on giving that nobody is obliged to continue."),
     Chart("reserves", "Reserves against covenant",
           ["free_cash", "target_reserve", "min_reserve_covenant"], "£",
           caption="Free cash below the covenant line is a breach."),
@@ -158,7 +166,9 @@ HEADLINES = [
     ("total_debt_final", "Debt outstanding at Year 50", "total_debt", "last"),
     ("tontine_raised", "Total Tontine capital raised", "tontine_cum_raised", "last"),
     ("gifts_total", "Cumulative gifts & bequests", "gift_cumulative", "last"),
-    ("min_dscr", "Worst DSCR", "dscr", "min"),
+    ("min_dscr", "Worst interest cover (all income)", "dscr", "min"),
+    ("min_cash_cover", "Worst cash interest cover", "cash_interest_cover", "min"),
+    ("min_rent_only", "Worst rent-only cover", "rent_only_cover", "min"),
     ("max_ltv", "Peak LTV", "ltv", "max"),
     ("min_reserve_cover", "Worst reserve cover", "reserve_cover", "min"),
     ("min_free_cash", "Lowest free cash", "free_cash", "min"),

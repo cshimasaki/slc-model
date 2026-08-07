@@ -39,6 +39,10 @@ tontine_fund:
     label: "Target investor annuity rate — spread over index"
     unit: "% p.a."
     row: 14
+  pf_coupon_basis:
+    label: "Coupon basis (real = spread only; nominal = CPI + spread, the workbook error)"
+    unit: "text"
+    row: 0
   pf_fund_op_margin:
     label: "Fund operating cost margin"
     unit: "% p.a."
@@ -67,6 +71,19 @@ tontine_fund:
     label: "Release phase start year"
     unit: "model year"
     row: 20
+  pf_release_mode:
+    label: "Release rule (geometric = original workbook, survivorship = mortality-driven)"
+    unit: "text"
+    # No row in Control & Parameters: added Aug 2026, after the port.
+    row: 0
+  pf_lockup_years:
+    label: "Minimum term before a charge can be released"
+    unit: "years"
+    row: 0
+  pf_mortality_gain_to_commons:
+    label: "Share of a dead investor's charge extinguished (rest goes to survivors)"
+    unit: "x"
+    row: 0
   pf_release_rate:
     label: "Annual release rate"
     unit: "% of outstanding balance p.a."
@@ -137,6 +154,19 @@ bequests_gifts:
     label: "Founding capital injection (Year 1 only)"
     unit: "£"
     row: 38
+  gift_property_start_yr:
+    label: "Property gifts — first year gifts begin accruing (0 = never)"
+    unit: "model year"
+    # Added Aug 2026, after the port. No row in Control & Parameters.
+    row: 0
+  gift_property_rate:
+    label: "Property gifts — properties per year once started"
+    unit: "properties p.a."
+    row: 0
+  gift_property_retrofit_mult:
+    label: "Property gifts — retrofit on receipt, multiple of standard"
+    unit: "x"
+    row: 0
   beq_growth_mult:
     label: "Real growth multiplier"
     unit: "% p.a."
@@ -272,6 +302,17 @@ growth_curve:
     unit: "years"
     row: 73
 
+operating_efficiency:
+  _title: "Operating Efficiency (scale economies)"
+  opex_learning_rate:
+    label: "Saving per doubling of the portfolio (0.92 = 8% cheaper each doubling)"
+    unit: "x"
+    row: 0
+  opex_efficiency_floor:
+    label: "Floor on per-property cost, as a share of the small-scale cost"
+    unit: "x"
+    row: 0
+
 capex_maintenance:
   _title: "Capex & Maintenance"
   sinking_per_prop:
@@ -324,6 +365,25 @@ tax_gift_aid:
     label: "Gift Aid recovery rate"
     unit: "% of qualifying gifts"
     row: 87
+
+covenants:
+  _title: "Covenants (self-imposed)"
+  cov_cash_cover_min:
+    label: "Minimum cash interest cover (excludes donated property)"
+    unit: "x"
+    row: 0
+  cov_rent_only_min:
+    label: "Minimum rent-only interest cover (no gifts at all)"
+    unit: "x"
+    row: 0
+  cov_rent_only_by_year:
+    label: "Year by which rent-only cover should be met"
+    unit: "model year"
+    row: 0
+  cov_legacy_dscr_min:
+    label: "Original self-imposed DSCR minimum (legacy, for comparison)"
+    unit: "x"
+    row: 0
 
 funding_discipline:
   _title: "Acquisition Funding Discipline"

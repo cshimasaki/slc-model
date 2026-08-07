@@ -314,6 +314,12 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--border
 --------------------------------------------------------------------------- */
 const DataSource = {
   async load() {
+    // A standalone build inlines the bundle, so the page opens by
+    // double-clicking with no server. The served version fetches it instead,
+    // which is what lets GitHub Pages rebuild the data without touching the
+    // page. Same seam a live what-if API would replace.
+    if (window.__SLC_DATA) return window.__SLC_DATA;
+
     const res = await fetch("data.json", { cache: "no-cache" });
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
     return res.json();
@@ -430,6 +436,8 @@ function referenceLine(bundle, scenario, key) {
   const labels = {
     pf_ltv_limit: "LTV limit",
     __dscr_covenant: "Covenant minimum",
+    __cash_cover_min: "Cash cover covenant",
+    __rent_only_min: "Self-financing (rent covers interest)",
     min_cash_buffer: "Minimum cash buffer"
   };
   return { value, label: labels[key] || key };
@@ -579,8 +587,9 @@ function renderCharts() {
 const TILE_ORDER = [
   "portfolio_final", "portfolio_value_final", "net_assets_final",
   "cumulative_retained_final", "total_debt_final", "tontine_raised",
-  "min_dscr", "max_ltv", "min_reserve_cover", "min_free_cash",
-  "years_dscr_breach", "years_capital_call"
+  "min_cash_cover", "min_rent_only", "first_self_financing_year",
+  "years_cash_cover_breach", "max_ltv", "min_reserve_cover",
+  "min_free_cash", "years_capital_call"
 ];
 
 /** Which headline figures signal trouble, and at what threshold. */
@@ -588,6 +597,13 @@ function tileTone(key, value, sc) {
   if (value === null || value === undefined) return "";
   switch (key) {
     case "min_dscr": return value < sc.reference.__dscr_covenant ? "bad" : "good";
+    case "min_cash_cover": return value < sc.reference.__cash_cover_min ? "bad" : "good";
+    case "min_rent_only": return value < sc.reference.__rent_only_min ? "bad" : "good";
+    case "years_cash_cover_breach": return value > 0 ? "bad" : "good";
+    // The portfolio should be paying its own interest by the target year.
+    case "first_self_financing_year":
+      if (value === null) return "bad";
+      return value > (sc.reference.__rent_only_by || 20) ? "bad" : "good";
     case "max_ltv": return value >= sc.reference.pf_ltv_limit - 1e-9 ? "bad" : "";
     case "min_reserve_cover": return value < 0 ? "bad" : "";
     case "min_free_cash": return value < 0 ? "bad" : "";
@@ -637,16 +653,29 @@ function renderWarnings() {
   const host = document.getElementById("warnings");
   if (state.compare) { host.innerHTML = ""; return; }
   const sc = state.bundle.scenarios[state.scenario];
-  const breaches = sc.headline.years_dscr_breach.value;
-  const minCover = sc.headline.min_reserve_cover.value;
+  const breaches = sc.headline.years_cash_cover_breach.value;
+  const selfYear = sc.headline.first_self_financing_year.value;
+  const target = sc.reference.__rent_only_by || 20;
 
-  if (!breaches) { host.innerHTML = ""; return; }
+  if (!breaches && selfYear !== null && selfYear <= target) { host.innerHTML = ""; return; }
+
+  const parts = [];
+  if (breaches) {
+    parts.push(`Cash interest cover falls below the
+      ${sc.reference.__cash_cover_min.toFixed(2)}× covenant in ${breaches} of
+      ${sc.years.length} years, reaching a low of
+      ${fmt(sc.headline.min_cash_cover.value, "x")}.`);
+  }
+  if (selfYear === null) {
+    parts.push(`Rent alone never covers interest across the whole projection —
+      the portfolio depends on gift income to service its debt throughout.`);
+  } else if (selfYear > target) {
+    parts.push(`Rent alone does not cover interest until year ${selfYear},
+      against a target of year ${target}. Until then the portfolio depends on
+      gift income — which nobody is obliged to continue — to service its debt.`);
+  }
   host.innerHTML = `<div class="callout">
-    <strong>This scenario breaches its covenants.</strong>
-    Debt service cover falls below the ${sc.reference.__dscr_covenant.toFixed(2)}× covenant in
-    ${breaches} of ${sc.years.length} years, reaching a low of
-    ${fmt(sc.headline.min_dscr.value, "x")}${minCover !== null && minCover < 0
-      ? `, and reserve cover goes negative (${fmt(minCover, "months")})` : ""}.
+    <strong>This scenario does not meet its covenants.</strong> ${parts.join(" ")}
     This is what the model projects on these assumptions — not an error in it.
   </div>`;
 }

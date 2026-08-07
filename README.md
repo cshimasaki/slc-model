@@ -6,14 +6,19 @@ A 50-year projection of the Stroud Land Commons: a community land trust that
 buys homes using a **Tontine fund** (a closed-end lifetime annuity mutual),
 **community shares** (junior debt), and gifts and bequests.
 
-Ported from `Financial Modelling for SLC V2.1.xlsx`, and validated
-number-for-number against it across all three scenarios.
+Started from `Financial Modelling for SLC V2.1.xlsx` and has moved well beyond
+it. The Excel comparison remains as a regression test on the arithmetic core,
+not as a statement that the current model matches the spreadsheet.
 
 **→ [Open the interactive explorer](https://cshimasaki.github.io/slc-model/)**
 
-The badge above is not decoration: it goes red the moment the Python model
-stops reproducing the original spreadsheet, cell for cell, across all three
-scenarios.
+**New here, or catching up?** [CHANGES.md](CHANGES.md) summarises what has
+changed since the original spreadsheet and what the model now says — written
+to be read without opening any code.
+
+The badge above is not decoration: it goes red if the arithmetic core stops
+reproducing the original spreadsheet on the original inputs — a regression
+check that the engine has not drifted since the port.
 
 ## Three layers, kept separate
 
@@ -131,18 +136,25 @@ comparison that cannot fail is worse than none.
 
 ## What the model currently says
 
-Reproduced faithfully from the workbook, not introduced by the port:
+| | Houses at Y50 | Net assets | Covenant breaches | Self-financing from |
+|---|---|---|---|---|
+| **Base** | 117 | £172m | **none** | year 6 |
+| **Optimistic** | 243 | £506m | **none** | year 3 |
+| **Stress** | 57 | £170m | **none** | year 11 |
 
-- **Base is in covenant breach.** Minimum DSCR 0.97× against a 1.20× covenant,
-  breaching in 21 of 50 years. Minimum reserve cover −8.2 months.
-- **Stress is materially worse.** Minimum DSCR 0.61×; cumulative retained
-  surplus ends at −£16.9m.
-- **Optimistic clears its covenants**, ending with 130 properties and £237m net
-  assets.
+All three scenarios clear the 1.25× cash interest cover covenant in every year,
+including Stress — high inflation, 15% voids, a 20% house-price crash in year 5,
+halved share take-up, and no property gifts at all.
 
-These are real results, not artefacts. See [`MODEL_LOG.md`](MODEL_LOG.md) for
-the four known quirks carried over from the workbook and why each was
-reproduced rather than fixed.
+**This is not because the plan became more ambitious.** It is because six
+things about the Tontine turned out to be wrong or missing, the largest being a
+coupon that charged inflation twice and overstated interest cost by 95%. The
+assumptions are, if anything, more conservative than the workbook's were.
+
+[CHANGES.md](CHANGES.md) explains all six in plain English, with what is still
+open — the mortality-gain split, the placeholder mortality basis, and
+withdrawal clustering. [MODEL_LOG.md](MODEL_LOG.md) has the full reasoning
+behind every decision.
 
 ## Making structural changes
 

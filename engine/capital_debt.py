@@ -26,10 +26,34 @@ normal loan in three ways:
 
 from __future__ import annotations
 
+from . import tontine_runoff
 from .assumptions import Assumptions
 from .excelfns import prior
 from .macro import MacroSeries
 from .state import ModelState
+
+# Loaded once. The curve is a fixed data file, not per-run state.
+#
+# Deliberately NOT wrapped in a try/except. An earlier version swallowed a
+# missing curve into `None`, which turned "the mortality data is absent" into
+# an obscure crash thousands of lines later. The file is required input; if it
+# is gone, saying so at import is the useful behaviour.
+runoff_curve = tontine_runoff.load_curve()
+
+
+def _fund_year(c, i: int) -> int:
+    """
+    Years since the Tontine first drew capital.
+
+    The actuarial curve is indexed from the fund's own first drawdown, which is
+    not the model year: the fund may not draw in year 1, and in scenarios where
+    it never draws there is no fund year at all. Returns -1 in that case, which
+    the curve reads as zero liability.
+    """
+    for k, drawn in enumerate(c.tf_drawdown):
+        if drawn > 0:
+            return i - k
+    return -1
 
 
 # ---------------------------------------------------------------- gifts ----
@@ -167,19 +191,60 @@ def tontine(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
     )
     c.tf_cum_raised_closing.append(c.tf_cum_raised_opening[i] + c.tf_drawdown[i])  # row 38
 
-    # Row 39: the coupon floats with CPI, plus the fixed spread.
-    c.tf_coupon_rate.append(m.cpi_rate[i] + a.pf_coupon_spread)
+    # Row 39: the coupon rate.
+    #
+    # The principal is ALREADY uplifted by CPI each year (row 31), and no
+    # principal is ever repaid -- so the investor's entire return is the
+    # coupon, paid on a base that grows with inflation. Their inflation
+    # protection is therefore already delivered by the indexation.
+    #
+    #   "real"     coupon = spread. The investor receives CPI (through the
+    #              growing principal) plus the spread. This is what the
+    #              indicative actuarial model does, and it matches the design
+    #              intent of a CPI + 2.5% annuity.
+    #   "nominal"  coupon = CPI + spread, the original workbook's formula.
+    #              Applied to an already-indexed principal it hands the
+    #              investor CPI twice, doubling their real return.
+    #
+    # "nominal" is retained only so the model still reproduces the
+    # spreadsheet. See MODEL_LOG.
+    if getattr(a, "pf_coupon_basis", "nominal") == "real":
+        c.tf_coupon_rate.append(a.pf_coupon_spread)
+    else:
+        c.tf_coupon_rate.append(m.cpi_rate[i] + a.pf_coupon_spread)
 
     # Row 40: interest on the indexed opening balance, with a half-year charged
     # on the money drawn during the year.
     c.tf_interest.append(-(c.tf_indexed_opening[i] + c.tf_drawdown[i] / 2) * c.tf_coupon_rate[i])
 
-    # Row 41: the tontine release. Negative -- it reduces the liability -- and
-    # credited to reserves rather than paid in cash.
-    c.tf_release.append(
-        -(c.tf_indexed_opening[i] + c.tf_drawdown[i]) * a.pf_release_rate
-        if year >= a.pf_release_start_yr else 0.0
-    )
+    # Rows 41-43: what happens as investors die.
+    #
+    # "survivorship" is the instrument as designed: each drawdown is a cohort
+    # of investors who entered at 65, SLC pays a coupon while they live, and on
+    # death the coupon stops and the charge is extinguished with no principal
+    # repaid. The closing balance is therefore built from the cohorts directly,
+    # and the release is whatever reconciles it -- the fall caused by deaths.
+    #
+    # "geometric" is the original workbook's flat percentage, kept so the model
+    # still reproduces the spreadsheet exactly.
+    mode = getattr(a, "pf_release_mode", "geometric")
+
+    if mode == "survivorship":
+        closing = tontine_runoff.outstanding_charge(
+            curve=runoff_curve,
+            drawdowns=c.tf_drawdown,
+            cpi_index=m.cpi_index,
+            year_index=i,
+            lockup_years=getattr(a, "pf_lockup_years", 5),
+            gain_to_commons=getattr(a, "pf_mortality_gain_to_commons", 1.0),
+        )
+        # Release is the residual: whatever the deaths took off the balance.
+        c.tf_release.append(closing - (c.tf_indexed_opening[i] + c.tf_drawdown[i]))
+    else:
+        c.tf_release.append(
+            -(c.tf_indexed_opening[i] + c.tf_drawdown[i]) * a.pf_release_rate
+            if year >= a.pf_release_start_yr else 0.0
+        )
 
     # Row 42: on refinancing, the whole remaining balance moves to the mortgage.
     c.tf_transferred.append(
@@ -268,6 +333,24 @@ def coverage(s: ModelState, i: int) -> None:
     if service <= 0:
         c.dscr.append("")                                                      # row 64
         c.reserve_cover.append("")                                             # row 65
+        c.cash_interest_cover.append("")
+        c.rent_only_cover.append("")
     else:
         c.dscr.append(s.statements.operating_surplus[i] / service)
         c.reserve_cover.append(s.statements.free_cash[i] / (service / 12))
+
+        # Cash cover: strip out donated property. It is income, and it is an
+        # asset, but it is not money -- interest cannot be paid with a house.
+        non_cash = s.assets.gift_property_value[i]
+        c.cash_interest_cover.append(
+            (s.statements.operating_surplus[i] - non_cash) / service
+        )
+
+        # Rent-only cover: strip out every gift, cash included. This asks the
+        # harder question -- can the portfolio service its own debt from the
+        # rent it earns, with no reliance on giving that nobody is obliged to
+        # continue?
+        all_gifts = s.statements.gifts_and_bequests[i] + s.statements.gift_aid[i]
+        c.rent_only_cover.append(
+            (s.statements.operating_surplus[i] - all_gifts) / service
+        )

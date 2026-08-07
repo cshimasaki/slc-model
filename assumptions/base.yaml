@@ -31,13 +31,64 @@ tontine_fund:
   # pf_release_start_yr a slice of the balance is released to SLC reserves each
   # year as a non-cash credit (a parametric proxy for annuitant survivorship).
   pf_index_label: CPI            # Indexation basis for principal and coupon
-  pf_investor_rate: 0.03         # Target investor annuity rate, spread over index (% p.a.)
+  # Set to CPI + 2.5% to match the indicative actuarial model (Aug 2026).
+  # With the fund's operating margin and regulatory charge unchanged, this
+  # gives an implied SLC coupon of CPI + 3.25% -- exactly the charge coupon
+  # that model prices. The actuarial work also found the fund collateralised
+  # at 2.13x its liabilities, i.e. the instrument can support a lower coupon
+  # than it was originally given.
+  pf_investor_rate: 0.025        # Target investor annuity rate, spread over index (% p.a.)
+
+  # How the coupon rate is applied to the (already CPI-uplifted) principal.
+  #   real     coupon = spread only. The investor's inflation protection
+  #            comes from the growing principal; the spread is their real
+  #            return. Matches the indicative actuarial model and the
+  #            design intent of a CPI + 2.5% annuity.
+  #   nominal  coupon = CPI + spread, as the original workbook had it.
+  #            Applied to an indexed principal this pays CPI twice and
+  #            doubles the investor's real return -- 5.0% instead of 2.5%.
+  # See MODEL_LOG: this was an error inherited from the spreadsheet.
+  pf_coupon_basis: real
   pf_fund_op_margin: 0.005       # Fund operating cost margin (% p.a.)
   pf_fund_reg_charge: 0.0025     # Fund regulatory capital charge (% p.a.)
   pf_max_raise: 50000000         # Tontine maximum raise (£)
   pf_invest_phase_yrs: 10        # Investment phase duration (years) — drawdowns only within this window
   pf_release_start_yr: 25        # Release phase start (model year)
-  pf_release_rate: 0.06          # Annual release rate (% of outstanding balance p.a.)
+
+  # How the charge is discharged once the release phase begins.
+  #
+  #   geometric  the original workbook's rule: a flat percentage of the
+  #              outstanding balance each year. Decays but never reaches zero,
+  #              so more than a third is still outstanding at year 50.
+  #   survivorship  the instrument as designed: each drawdown is a cohort of
+  #              investors, SLC pays a coupon while they live, and on death
+  #              the coupon stops and the charge is extinguished with no
+  #              principal repaid. Mortality is the only mechanism.
+  #
+  # There is no release schedule and no redemption date: a tontine charge ends
+  # when its investor does. pf_release_start_yr therefore has no effect in
+  # survivorship mode -- it belongs to the geometric rule only.
+  pf_release_mode: survivorship
+  pf_release_rate: 0.06          # geometric mode only: % of outstanding balance p.a.
+
+  # Minimum term: a charge cannot be released in the first few years after the
+  # investment, however unlucky the investor.
+  pf_lockup_years: 5
+
+  # What happens to a dead investor's capital.
+  #   1.0  the charge is extinguished and the Commons holds the property free
+  #        of it. This is the mechanic as currently described.
+  #   0.0  nothing is extinguished; the entitlement passes to the surviving
+  #        investors, lifting their yield without reducing what SLC owes --
+  #        the classic tontine survivorship benefit.
+  # Anything between splits it.
+  #
+  # UNDECIDED — see MODEL_LOG. A split would raise investor yield, and with it
+  # possibly the rate of new investment, at direct cost to SLC's balance sheet.
+  # It is the single most consequential open parameter in the Tontine.
+  pf_mortality_gain_to_commons: 1.0
+
+
   pf_ltv_limit: 0.70             # LTV limit (% of portfolio value)
   pf_refi_toggle: 0              # Refinance into commercial mortgage? (1 = Yes)
   pf_refi_year: 26               # Refinancing year (model year)
@@ -49,7 +100,16 @@ community_shares:
   # total capital, and paying a dividend only out of available surplus.
   cs_dividend_rate: 0.03         # Default dividend rate (% p.a.)
   cs_max_pct_capital: 0.20       # Maximum issuance cap (% of total capital)
-  cs_withdrawal_years: 5         # Withdrawal restriction period (years)
+  # Withdrawal restriction period. The workbook had 5; the actual share offer
+  # terms are 2, corrected Aug 2026.
+  #
+  # Note what the model does with this: withdrawals each year are a fixed rate
+  # applied to the closing balance from this many years ago. That makes the
+  # withdrawal line a smooth, lagged echo of the issuance line. Real
+  # withdrawals will be lumpier -- driven by individual circumstances and
+  # likely to cluster if confidence dips or a dividend is cut. The smoothness
+  # is a property of the deterministic mechanic, not a forecast. See MODEL_LOG.
+  cs_withdrawal_years: 2
   cs_issue_cost_pct: 0.05        # Issuance / marketing cost (% of proceeds)
   cs_baseline_issue: 250000      # Baseline annual issuance, real (£ p.a.)
   cs_takeup_mult: 1.0            # Take-up multiplier (x)
@@ -60,6 +120,28 @@ bequests_gifts:
   beq_baseline: 60000            # Bequests from estates, not Gift Aid eligible (£ p.a.)
   founding_capital: 150000       # Founding capital injection, Year 1 only (£)
   beq_growth_mult: 0.0           # Real growth multiplier on gifts and bequests (% p.a.)
+
+  # --- Property gifts (in kind, not cash) -----------------------------------
+  # A house given to the Commons outright: no purchase price, no debt, no LTV
+  # draw, earning rent from the year it arrives. There is currently no vehicle
+  # for gifting property this way in Stroud or in much of the UK.
+  #
+  # Deliberately conservative. Nobody gives away a house to an organisation
+  # with no track record, so gifts are treated as EARNED by demonstrated
+  # community benefit rather than assumed from the outset -- hence a start year
+  # rather than just a rate. Base assumes nothing at all for the first 14 years,
+  # then one house every other year.
+  #
+  # The rate may be fractional: entitlement accumulates and a house arrives when
+  # it crosses one whole property, so gifts are lumpy rather than smeared.
+  gift_property_start_yr: 15     # First year gifts begin accruing (0 = never). At a
+                                 # rate of 0.5 the first whole house arrives in
+                                 # year 16.
+  gift_property_rate: 0.5        # Properties gifted per year once started
+  gift_property_retrofit_mult: 3.0   # Retrofit on receipt, as a multiple of the
+                                     # standard retrofit_cost. Gifted stock tends
+                                     # to be older and to need more work than a
+                                     # property chosen and bought on the market.
 
 rent_yield:
   gross_yield: 0.05              # Gross rental yield (% of purchase price)
@@ -106,6 +188,31 @@ growth_curve:
   logistic_ceiling: 200          # Logistic ceiling, max portfolio (properties)
   logistic_dbl_yrs: 4            # Doubling rate (years)
 
+operating_efficiency:
+  # Per-property running costs fall as the estate grows: materials bought in
+  # bulk, gas safety checks batched across a round of properties rather than
+  # booked one at a time, and enough contracted volume to negotiate on price.
+  #
+  # A learning curve, the standard form for procurement: unit cost falls by a
+  # fixed proportion for every DOUBLING of the portfolio. The shape is the
+  # point -- the first ten houses buy most of the saving, the two hundredth
+  # buys almost none.
+  #
+  # Applies to `admin_per_prop` and `maint_per_prop`. NOT to
+  # `sinking_per_prop`, which is a provision against future capital works
+  # rather than a running cost: the roof still needs replacing whatever the
+  # estate paid for the scaffolding.
+  #
+  # WHERE THE SAVING GOES IS NOT MODELLED. Here it simply improves the surplus
+  # and stays with the Commons. The intent is to share it between tenants and
+  # investors and most likely consume it through retrofitting -- a rent
+  # reduction and capex respectively, neither of which is represented. Read
+  # these figures as the size of the prize, not the gain to the balance sheet.
+  #
+  # Set opex_learning_rate to 1.0 to switch the whole mechanism off.
+  opex_learning_rate: 0.92       # each doubling of the portfolio takes 8% off per-property cost
+  opex_efficiency_floor: 0.65    # never below 65% of the small-scale cost
+
 capex_maintenance:
   sinking_per_prop: 1500         # Sinking fund contribution (£ / property / yr)
   maint_per_prop: 700            # Structural maintenance spend (£ / property / yr)
@@ -124,6 +231,36 @@ tax_gift_aid:
   ct_rate: 0.25                  # Corporation tax rate if not exempt (%)
   gift_aid_toggle: 1             # Gift Aid applicable? (1 = Yes)
   gift_aid_rate: 0.25            # Gift Aid recovery rate (% of qualifying gifts)
+
+covenants:
+  # Self-imposed. There is no lender requiring these -- which makes stating
+  # them, and the reasoning, more important rather than less.
+  #
+  # Note what the Tontine is: interest-only, no maturity, no amortisation, and
+  # it extinguishes on death. Over 50 years the model repays GBP 0 of
+  # principal. So these are INTEREST cover tests, not debt-service cover, and
+  # the refinancing risk a geared commercial borrower carries is absent. UK
+  # housing associations typically covenant interest cover at 1.10-1.50; the
+  # structural case here is for the lower half of that range, and the gift
+  # dependency and single-locality concentration are what argue it back up.
+
+  # 1. Cash interest cover: rent plus CASH gifts and Gift Aid, over interest.
+  #    Excludes donated property -- income and an asset, but not money, and
+  #    interest cannot be paid with a house.
+  cov_cash_cover_min: 1.25
+
+  # 2. Rent-only interest cover: no gifts at all, contractual or not. Asks
+  #    whether the portfolio can service its own debt. This is the test that
+  #    actually disciplines the plan, and it is the one currently failing.
+  cov_rent_only_min: 1.00
+  cov_rent_only_by_year: 20     # year by which test 2 should be met
+
+  # 3. The third test is test 1 measured under a CPI +2pt world rather than a
+  #    separate ratio, because the coupon is CPI-linked and reprices at once
+  #    while rents review annually. The Stress scenario already is CPI +2.
+
+  # The original self-imposed figure, kept so the old series stays readable.
+  cov_legacy_dscr_min: 1.20
 
 funding_discipline:
   constrain_growth: 1            # Cap acquisitions at affordable level? (1 = Yes)
