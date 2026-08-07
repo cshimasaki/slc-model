@@ -24,10 +24,17 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from engine.assumptions import load                # noqa: E402
 from engine.model import run                       # noqa: E402
 from engine.state import SHEET_MAP                 # noqa: E402
 
 BASELINE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "baselines")
+
+# Validation runs on the assumptions frozen at the moment of the port, NOT on
+# the live ones in assumptions/. The Excel workbook is a fixed artefact; asking
+# whether the engine reproduces it is only meaningful against the inputs it was
+# reproduced with. See port_reference/README.md.
+PORT_REFERENCE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "port_reference")
 
 # Relative tolerance for non-trivial numbers, absolute for values near zero.
 REL_TOL = 1e-9
@@ -107,7 +114,7 @@ def compare_scenario(scenario: str, verbose: bool = False) -> tuple[list[Mismatc
     with open(path, encoding="utf-8") as f:
         baseline = json.load(f)
 
-    result = run(scenario)
+    result = run(load(scenario, assumptions_dir=PORT_REFERENCE_DIR))
     mismatches: list[Mismatch] = []
     cov = Coverage()
 

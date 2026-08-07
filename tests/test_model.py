@@ -45,12 +45,24 @@ def test_deltas_apply_over_base():
 
 
 def test_coupon_spread_is_derived_not_stored():
-    """Changing a component must move the coupon, as =SUM(E14:E16) does."""
+    """
+    Changing a component must move the coupon, as =SUM(E14:E16) does.
+
+    Deliberately asserts the *relationship*, never a literal total. Pinning the
+    total would make a legitimate pricing decision look like a broken test --
+    which is exactly what happened when the investor rate moved to 2.5%.
+    """
     a = load("base")
     assert a.pf_coupon_spread == pytest.approx(
         a.pf_investor_rate + a.pf_fund_op_margin + a.pf_fund_reg_charge
     )
-    assert a.pf_coupon_spread == pytest.approx(0.0375)
+
+    # And it is genuinely derived: move a component, the total follows.
+    bumped = load("base")
+    bumped.values["pf_investor_rate"] += 0.01
+    from engine.assumptions import _derive
+    _derive(bumped.values)
+    assert bumped.pf_coupon_spread == pytest.approx(a.pf_coupon_spread + 0.01)
 
 
 def test_labels_cover_every_parameter():

@@ -31,13 +31,7 @@ tontine_fund:
   # pf_release_start_yr a slice of the balance is released to SLC reserves each
   # year as a non-cash credit (a parametric proxy for annuitant survivorship).
   pf_index_label: CPI            # Indexation basis for principal and coupon
-  # Set to CPI + 2.5% to match the indicative actuarial model (Aug 2026).
-  # With the fund's operating margin and regulatory charge unchanged, this
-  # gives an implied SLC coupon of CPI + 3.25% -- exactly the charge coupon
-  # that model prices. The actuarial work also found the fund collateralised
-  # at 2.13x its liabilities, i.e. the instrument can support a lower coupon
-  # than it was originally given.
-  pf_investor_rate: 0.025        # Target investor annuity rate, spread over index (% p.a.)
+  pf_investor_rate: 0.03         # Target investor annuity rate, spread over index (% p.a.)
   pf_fund_op_margin: 0.005       # Fund operating cost margin (% p.a.)
   pf_fund_reg_charge: 0.0025     # Fund regulatory capital charge (% p.a.)
   pf_max_raise: 50000000         # Tontine maximum raise (£)

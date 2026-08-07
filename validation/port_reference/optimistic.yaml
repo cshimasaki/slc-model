@@ -1,0 +1,51 @@
+# =============================================================================
+# OPTIMISTIC SCENARIO — deltas from base.yaml
+# =============================================================================
+# Question this scenario answers:
+#   "If the fundraising environment, the housing market and our own delivery
+#    capacity all run in our favour, how much land can the Commons hold?"
+#
+# Narrative: inflation runs lower (2.0%) while rents and house prices run
+# higher (3.0% rent growth, 2.0% HPI premium over CPI); voids fall to 3%;
+# community-share take-up is half again as strong and withdrawals halve;
+# gifts and bequests grow 2% p.a. in real terms; lenders allow 75% LTV at a
+# cheaper 4.5%; the portfolio ceiling lifts to 250 properties and doubles
+# every 3 years instead of 4. The one-off house-price shock is set to +10%
+# but never fires, because hpi_shock_year stays 0 (inherited from Base).
+#
+# Every key not listed here is inherited from base.yaml unchanged.
+# =============================================================================
+
+macro_indexation:
+  cpi_general: 0.02          # was 0.025 — lower general inflation
+  rent_inflation: 0.03       # was 0.025 — rents outpace CPI
+  hpi_premium: 0.02          # was 0.01 — house prices outpace CPI by more
+
+tontine_fund:
+  pf_ltv_limit: 0.75         # was 0.70 — lenders allow more gearing
+  pf_refi_rate: 0.045        # was 0.055 — cheaper commercial debt
+
+community_shares:
+  cs_issue_cost_pct: 0.04    # was 0.05 — cheaper to raise
+  cs_takeup_mult: 1.5        # was 1.0 — stronger community appetite
+  cs_withdrawal_rate: 0.01   # was 0.02 — members hold their shares longer
+
+bequests_gifts:
+  gift_baseline: 60000       # was 40000
+  beq_baseline: 90000        # was 60000
+  beq_growth_mult: 0.02      # was 0.0 — giving grows in real terms
+
+rent_yield:
+  gross_yield: 0.055         # was 0.05
+  lc_share: 0.85             # was 0.80 — a larger share of rent to the Commons
+  void_rate: 0.03            # was 0.05
+
+growth_curve:
+  logistic_ceiling: 250      # was 200 properties
+  logistic_dbl_yrs: 3        # was 4 years
+
+capex_maintenance:
+  sinking_return: 0.02       # was 0.0 — sinking fund earns a return
+
+market_shock:
+  hpi_shock_pct: 0.10        # was -0.20; inert here, hpi_shock_year is 0
