@@ -196,27 +196,29 @@ def tontine(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
     # on the money drawn during the year.
     c.tf_interest.append(-(c.tf_indexed_opening[i] + c.tf_drawdown[i] / 2) * c.tf_coupon_rate[i])
 
-    # Row 41: the tontine release. Negative -- it reduces the liability -- and
-    # credited to reserves rather than paid in cash.
+    # Rows 41-43: what happens as investors die.
     #
-    # Two rules are available. "geometric" is the original workbook's flat
-    # percentage of the outstanding balance, kept as the default so the model
-    # still reproduces the spreadsheet exactly. "runoff" tracks the actuarial
-    # liability instead; see engine/tontine_runoff.py for why that matters.
-    if getattr(a, "pf_release_mode", "geometric") == "runoff":
-        c.tf_release.append(
-            tontine_runoff.release_for_year(
-                curve=runoff_curve,
-                indexed_opening=c.tf_indexed_opening[i],
-                drawdown=c.tf_drawdown[i],
-                cumulative_raised=c.tf_cum_raised_closing[i],
-                fund_year=_fund_year(c, i),
-                coverage_target=a.pf_release_coverage_target,
-                glide_years=getattr(a, "pf_release_glide_years", 15),
-                model_year=year,
-                release_start_year=a.pf_release_start_yr,
-            )
+    # "survivorship" is the instrument as designed: each drawdown is a cohort
+    # of investors who entered at 65, SLC pays a coupon while they live, and on
+    # death the coupon stops and the charge is extinguished with no principal
+    # repaid. The closing balance is therefore built from the cohorts directly,
+    # and the release is whatever reconciles it -- the fall caused by deaths.
+    #
+    # "geometric" is the original workbook's flat percentage, kept so the model
+    # still reproduces the spreadsheet exactly.
+    mode = getattr(a, "pf_release_mode", "geometric")
+
+    if mode == "survivorship":
+        closing = tontine_runoff.outstanding_charge(
+            curve=runoff_curve,
+            drawdowns=c.tf_drawdown,
+            cpi_index=m.cpi_index,
+            year_index=i,
+            lockup_years=getattr(a, "pf_lockup_years", 5),
+            gain_to_commons=getattr(a, "pf_mortality_gain_to_commons", 1.0),
         )
+        # Release is the residual: whatever the deaths took off the balance.
+        c.tf_release.append(closing - (c.tf_indexed_opening[i] + c.tf_drawdown[i]))
     else:
         c.tf_release.append(
             -(c.tf_indexed_opening[i] + c.tf_drawdown[i]) * a.pf_release_rate

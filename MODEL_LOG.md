@@ -244,6 +244,70 @@ Source: `Housing Commons Draft Prospectus.pdf`.
 
 ---
 
+## Tontine release is mortality-driven, not scheduled — supersedes the run-off rule
+**Branch:** `structure/property-gifts` (folded in) · **Date:** 2026-08-07 · **Decision:** adopt
+
+**What was wrong.** Both earlier release rules were built on a misreading of
+the instrument. Spotted from a chart: debt outstanding fell off a cliff at
+year 25. It was not mortality — lives fall 5.2% that year, entirely gradually.
+
+Checking the mechanic against how the Tontine actually works surfaced three
+divergences, of which the first two were material:
+
+1. **Interest did not stop when investors died.** At year 21, 76.5% of
+   investors were alive but the model charged interest on a balance that had
+   *grown* to £9.46m — £544k that year against roughly £416k owed. It paid
+   coupon on dead investors' capital until the release phase opened.
+2. **The charge did not track survivorship.** It grew at CPI on the full
+   amount regardless of who was alive.
+3. **Release was modelled as a scheduled phase.** It is not. There is no
+   release phase, no coverage ratio, no glide and no redemption date.
+
+The root error was mine: I inferred the mechanic from the actuarial model's
+*solvency* framing rather than asking how the instrument works. That produced a
+coverage-target rule solving a problem — "how much security should back the
+remaining liability" — that this structure does not have, because the charge is
+per-investor and dies with the investor.
+
+**The instrument as designed.** Each drawdown is a cohort of investors entering
+at 65. SLC pays a coupon while they live. On death the coupon stops, the charge
+is extinguished, and **no principal is repaid**. Mortality is the only
+mechanism. Two policy levers sit on top:
+
+- `pf_lockup_years` (5) — a minimum term before any charge can be released.
+- `pf_mortality_gain_to_commons` (1.0) — what happens to a dead investor's
+  capital.
+
+`pf_release_start_yr`, `pf_release_coverage_target` and
+`pf_release_glide_years` are gone. `geometric` is retained solely for Excel
+fidelity.
+
+**The open question, quantified.** The mortality-gain split is undecided, and
+it is the most consequential parameter in the Tontine. It decides whether the
+survivorship benefit accrues to the Commons or lifts investor yield — which
+may in turn accelerate further investment.
+
+| To Commons | To investors | Y50 balance | 50-yr interest | Net assets |
+|---|---|---|---|---|
+| 100% | 0% | £0.11m | £12.8m | £141m |
+| 75% | 25% | £5.18m | £17.5m | £125m |
+| 50% | 50% | £9.79m | £21.3m | £109m |
+| 0% | 100% | £19.4m | £30.3m | £80m |
+
+Every 25 points conceded to investors costs SLC roughly £15m of net assets and
+£4.5m of interest. At 0% the charge never runs off at all — it only indexes
+upward, and SLC owes as much at year 50 as it ever did.
+
+**Decision: adopt**, defaulting to 100% to the Commons, which is the mechanic
+as described. The split stays exposed as a parameter because it is a live
+commercial decision, not a modelling one.
+
+**Answered while doing this:** entry age stays a single blended 65; a spouse or
+joint annuitant is out of scope for now; the lock-up is a genuine minimum term
+rather than an observation about when first deaths occur.
+
+---
+
 ## Planned — not yet started
 
 Recorded 2026-08-07 from the design discussion, so the sequence is not lost.

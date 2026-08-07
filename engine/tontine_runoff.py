@@ -66,6 +66,7 @@ class RunoffCurve:
     fund_years: tuple[int, ...]
     tp_per_pound: tuple[float, ...]
     lives_index: tuple[float, ...]
+    survivorship: tuple[float, ...]
 
     def tp_at(self, fund_year: int) -> float:
         """
@@ -77,6 +78,21 @@ class RunoffCurve:
         if fund_year >= len(self.tp_per_pound):
             return 0.0
         return self.tp_per_pound[fund_year]
+
+    def survival_at(self, age: int) -> float:
+        """
+        Probability an investor who entered at 65 is alive `age` years later.
+
+        This is the quantity the charge actually depends on: a charge is
+        released when its own investor dies, so what matters is that
+        investor's survival from their own entry -- not the fund's aggregate
+        headcount, which rises during the investment phase as cohorts join.
+        """
+        if age <= 0:
+            return 1.0
+        if age >= len(self.survivorship):
+            return 0.0
+        return self.survivorship[age]
 
     def lives_at(self, fund_year: int) -> float:
         if fund_year < 0 or fund_year >= len(self.lives_index):
@@ -116,6 +132,7 @@ def load_curve(assumptions_dir: str | None = None) -> RunoffCurve:
     years: list[int] = []
     tp: list[float] = []
     lives: list[float] = []
+    surv: list[float] = []
     with open(path, encoding="utf-8") as f:
         # The file leads with a provenance block; csv.DictReader would treat
         # those as data.
@@ -124,6 +141,7 @@ def load_curve(assumptions_dir: str | None = None) -> RunoffCurve:
             years.append(int(row["fund_year"]))
             tp.append(float(row["tp_per_pound_raised"]))
             lives.append(float(row["lives_index"]))
+            surv.append(float(row.get("cohort_survivorship") or 0.0))
 
     if not years:
         raise RunoffError(f"run-off curve is empty: {path}")
@@ -132,79 +150,56 @@ def load_curve(assumptions_dir: str | None = None) -> RunoffCurve:
             f"run-off curve must start at fund year 0 and have no gaps; got {years[:5]}..."
         )
 
-    return RunoffCurve(tuple(years), tuple(tp), tuple(lives))
+    return RunoffCurve(tuple(years), tuple(tp), tuple(lives), tuple(surv))
 
 
-def release_for_year(
+def outstanding_charge(
     *,
     curve: RunoffCurve,
-    indexed_opening: float,
-    drawdown: float,
-    cumulative_raised: float,
-    fund_year: int,
-    coverage_target: float,
-    glide_years: int,
-    model_year: int,
-    release_start_year: int,
+    drawdowns: list[float],
+    cpi_index: list[float],
+    year_index: int,
+    lockup_years: int,
+    gain_to_commons: float,
 ) -> float:
     """
-    The release for one year under the run-off-tracking rule.
+    The Tontine charge still outstanding, built up cohort by cohort.
 
-    Returns a negative number, matching the sheet's sign convention: a release
-    reduces the outstanding charge and is credited to SLC's reserves.
+    This is the instrument as designed, and it is simpler than a debt schedule
+    because it has no schedule. Each year's drawdown is a cohort of investors
+    who entered at 65. SLC pays a coupon on that capital for as long as the
+    investor lives. When they die the coupon stops and their charge is
+    extinguished -- no principal is ever repaid. There is no term, no
+    redemption date and no amortisation; mortality is the only mechanism.
 
-    `fund_year` is years since the first drawdown, which is what indexes the
-    actuarial curve. It is not the model year: if the fund first draws in model
-    year 1, the two differ by one, and if it never draws they are unrelated.
+    Two policy levers sit on top of it.
 
-    The release has two parts, and the split is the whole design.
+    `lockup_years` is a minimum term: a charge cannot be released in the first
+    few years after the investment, however unlucky the investor.
 
-    1. **Tracking.** Discharge the same *proportion* the liability itself fell
-       by this year. This is what "tracks the run-off" has to mean: the charge
-       declines in step with the obligation it secures, smoothly, with no
-       schedule of its own.
-
-    2. **Glide.** Any coverage above target is worked off over `glide_years`,
-       not corrected in one go.
-
-    Part 2 exists because of a bug this rule had first. Releasing straight down
-    to target snapped fifteen years of accumulated over-coverage into a single
-    year -- £9.3m discharged at once at year 25, against £150k a year after.
-    That is not tracking anything; it is a level target with a cliff in it, and
-    it is not a discharge any lender or registrar would recognise.
-
-    The cause is structural rather than arithmetic: the liability peaks around
-    fund year 9 and runs off from there, but policy blocks any release until
-    year 25. Sixteen years of divergence accrue before the rule is allowed to
-    act. Gliding spreads that backlog; starting the release nearer the
-    liability peak would avoid creating it at all, but that is a policy choice
-    and belongs to whoever sets `pf_release_start_yr`.
+    `gain_to_commons` splits what happens to a dead investor's capital. At 1.0
+    the whole charge is extinguished and the Commons holds the property free of
+    it. At 0.0 none of it is extinguished -- the entitlement passes to the
+    surviving investors, lifting their yield without reducing what SLC owes,
+    which is the classic tontine survivorship benefit. Anything between splits
+    it. This is a live design question, and the parameter is the point at which
+    it gets decided rather than assumed.
     """
-    if model_year < release_start_year:
-        return 0.0
-    if cumulative_raised <= 0:
-        return 0.0
+    total = 0.0
+    for k, drawn in enumerate(drawdowns[: year_index + 1]):
+        if drawn <= 0:
+            continue
+        # The principal is CPI-uplifted from the year it was drawn.
+        indexation = cpi_index[year_index] / cpi_index[k]
 
-    outstanding = indexed_opening + drawdown
-    if outstanding <= 0:
-        return 0.0
+        age = year_index - k
+        if age < lockup_years:
+            surviving_share = 1.0          # locked: nothing can be released yet
+        else:
+            alive = curve.survival_at(age)
+            # Only the extinguished share reduces what SLC owes; the rest stays
+            # outstanding, just owed to fewer people.
+            surviving_share = 1.0 - gain_to_commons * (1.0 - alive)
 
-    # Scale the actuarial curve to the capital this model actually raised.
-    tp_now = curve.tp_at(fund_year) * cumulative_raised
-    tp_prev = curve.tp_at(fund_year - 1) * cumulative_raised
-
-    # 1. Track: the proportion by which the liability fell this year.
-    if tp_prev > 0 and tp_now < tp_prev:
-        tracking = outstanding * (1 - tp_now / tp_prev)
-    else:
-        tracking = 0.0
-
-    # 2. Glide: work off any coverage above target gradually.
-    remaining = outstanding - tracking
-    excess = max(0.0, remaining - coverage_target * tp_now)
-    glide = excess / max(1, glide_years)
-
-    total = min(tracking + glide, outstanding)
-    if total <= 0:
-        return 0.0
-    return -total
+        total += drawn * indexation * surviving_share
+    return total

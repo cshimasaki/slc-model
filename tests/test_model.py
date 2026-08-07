@@ -302,7 +302,7 @@ def test_release_has_no_cliff(scenario):
     from engine.assumptions import load
 
     a = load(scenario)
-    a.values["pf_release_mode"] = "runoff"
+    a.values["pf_release_mode"] = "survivorship"
     c = run(a).state.capital
 
     releases = [-v for v in c.tf_release if v < 0]
@@ -314,11 +314,72 @@ def test_release_has_no_cliff(scenario):
         f"a single year discharges {max(releases) / peak:.0%} of the peak balance"
     )
 
-    for prev, nxt in zip(releases, releases[1:]):
-        if prev > 1000:
-            assert nxt < 3 * prev, (
-                f"release jumps from {prev:,.0f} to {nxt:,.0f} year on year"
-            )
+    # And no year may discharge a large share of the balance standing at the
+    # time. Measuring against the balance rather than against the previous
+    # year's release is what distinguishes a cliff from a ramp: releases climb
+    # steeply early on as successive cohorts leave lock-up, which is correct
+    # and would trip a year-on-year ratio test for no good reason.
+    #
+    # Years where almost nothing is left are skipped: a 105-year-old really
+    # does have a very high annual mortality rate, so a big proportional
+    # release on a trivial balance is the model working, not failing.
+    for i, closing in enumerate(c.tf_closing):
+        pre_release = c.tf_indexed_opening[i] + c.tf_drawdown[i]
+        if pre_release <= 0.01 * peak:
+            continue
+        share = -c.tf_release[i] / pre_release
+        assert share < 0.40, (
+            f"year {i + 1} discharges {share:.0%} of the balance standing at the time"
+        )
+
+
+def test_lockup_blocks_early_release():
+    """No charge can be released inside its minimum term."""
+    from engine.assumptions import load
+
+    a = load("base")
+    a.values["pf_release_mode"] = "survivorship"
+    r = run(a)
+    c = r.state.capital
+    first_draw = next(i for i, d in enumerate(c.tf_drawdown) if d > 0)
+
+    for i in range(first_draw, first_draw + a.values["pf_lockup_years"]):
+        assert c.tf_release[i] == 0, (
+            f"a charge was released in year {i + 1}, inside the {a.values['pf_lockup_years']}-year lock-up"
+        )
+
+
+def test_mortality_gain_split_decides_who_benefits():
+    """
+    The undecided lever, pinned so its meaning cannot drift.
+
+    At 1.0 a dead investor's charge is extinguished and SLC's liability falls.
+    At 0.0 nothing is extinguished -- the entitlement passes to surviving
+    investors, so SLC owes exactly as much as before and pays exactly as much
+    interest. The difference between those two runs is the whole value of the
+    survivorship benefit, and which way it flows is a design decision, not a
+    modelling one.
+    """
+    from engine.assumptions import load
+
+    def run_with(share):
+        a = load("base")
+        a.values["pf_release_mode"] = "survivorship"
+        a.values["pf_mortality_gain_to_commons"] = share
+        return run(a, check=False)
+
+    to_commons, to_investors = run_with(1.0), run_with(0.0)
+
+    # All to the Commons: the charge runs off.
+    assert to_commons.state.capital.tf_closing[-1] < to_commons.state.capital.tf_closing[9]
+    # All to investors: nothing is ever released, so the balance only indexes
+    # up. The release is computed as a reconciling residual, so it lands on
+    # floating-point dust rather than a clean zero.
+    assert all(abs(v) < 1e-6 for v in to_investors.state.capital.tf_release)
+    assert to_investors.state.capital.tf_closing[-1] > to_investors.state.capital.tf_closing[9]
+
+    # And SLC pays materially more interest when the gain goes to investors.
+    assert -sum(to_investors.state.capital.tf_interest) > -sum(to_commons.state.capital.tf_interest)
 
 
 def test_release_never_fully_discharges_while_liability_remains():
@@ -335,7 +396,7 @@ def test_release_never_fully_discharges_while_liability_remains():
     from engine.tontine_runoff import load_curve
 
     a = load("base")
-    a.values["pf_release_mode"] = "runoff"
+    a.values["pf_release_mode"] = "survivorship"
     r = run(a)
     c, curve = r.state.capital, load_curve()
     first = next(i for i, d in enumerate(c.tf_drawdown) if d > 0)

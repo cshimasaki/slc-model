@@ -49,30 +49,35 @@ tontine_fund:
   #   geometric  the original workbook's rule: a flat percentage of the
   #              outstanding balance each year. Decays but never reaches zero,
   #              so more than a third is still outstanding at year 50.
-  #   runoff     discharge tracks the actuarial liability, holding a target
-  #              coverage multiple of technical provisions and never fully
-  #              discharging while an annuitant survives.
+  #   survivorship  the instrument as designed: each drawdown is a cohort of
+  #              investors, SLC pays a coupon while they live, and on death
+  #              the coupon stops and the charge is extinguished with no
+  #              principal repaid. Mortality is the only mechanism.
   #
-  # The indicative actuarial model (Aug 2026) found that the binding constraint
-  # is the release COMPLETION date, not its start: discharging before the last
-  # annuitant dies leaves survivors unbacked. "runoff" removes that failure
-  # mode by construction rather than by tuning the rate.
-  pf_release_mode: runoff
+  # There is no release schedule and no redemption date: a tontine charge ends
+  # when its investor does. pf_release_start_yr therefore has no effect in
+  # survivorship mode -- it belongs to the geometric rule only.
+  pf_release_mode: survivorship
   pf_release_rate: 0.06          # geometric mode only: % of outstanding balance p.a.
 
-  # runoff mode only: multiple of technical provisions the charge should hold.
-  # The actuarial model found the fund collateralised at 2.13x its liabilities;
-  # this makes that ratio an explicit, tunable policy choice rather than an
-  # accident of the release schedule.
-  pf_release_coverage_target: 1.5
+  # Minimum term: a charge cannot be released in the first few years after the
+  # investment, however unlucky the investor.
+  pf_lockup_years: 5
 
-  # runoff mode only: years over which any coverage ABOVE target is worked
-  # off. The liability peaks around fund year 9 and runs off from there, but
-  # policy blocks release until year 25, so sixteen years of over-coverage
-  # accrue before the rule may act. Without a glide the rule discharges that
-  # whole backlog in one year -- a cliff no lender or registrar would
-  # recognise as a discharge. Set to 1 to reproduce that behaviour.
-  pf_release_glide_years: 15
+  # What happens to a dead investor's capital.
+  #   1.0  the charge is extinguished and the Commons holds the property free
+  #        of it. This is the mechanic as currently described.
+  #   0.0  nothing is extinguished; the entitlement passes to the surviving
+  #        investors, lifting their yield without reducing what SLC owes --
+  #        the classic tontine survivorship benefit.
+  # Anything between splits it.
+  #
+  # UNDECIDED — see MODEL_LOG. A split would raise investor yield, and with it
+  # possibly the rate of new investment, at direct cost to SLC's balance sheet.
+  # It is the single most consequential open parameter in the Tontine.
+  pf_mortality_gain_to_commons: 1.0
+
+
   pf_ltv_limit: 0.70             # LTV limit (% of portfolio value)
   pf_refi_toggle: 0              # Refinance into commercial mortgage? (1 = Yes)
   pf_refi_year: 26               # Refinancing year (model year)

@@ -68,17 +68,17 @@ tontine_fund:
     unit: "model year"
     row: 20
   pf_release_mode:
-    label: "Release rule (geometric = original workbook, runoff = tracks liability)"
+    label: "Release rule (geometric = original workbook, survivorship = mortality-driven)"
     unit: "text"
     # No row in Control & Parameters: added Aug 2026, after the port.
     row: 0
-  pf_release_coverage_target:
-    label: "Target coverage of technical provisions (runoff mode)"
-    unit: "x"
-    row: 0
-  pf_release_glide_years:
-    label: "Years over which excess coverage is worked off (runoff mode)"
+  pf_lockup_years:
+    label: "Minimum term before a charge can be released"
     unit: "years"
+    row: 0
+  pf_mortality_gain_to_commons:
+    label: "Share of a dead investor's charge extinguished (rest goes to survivors)"
+    unit: "x"
     row: 0
   pf_release_rate:
     label: "Annual release rate"
