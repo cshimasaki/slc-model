@@ -477,8 +477,7 @@ def test_every_input_file_is_tracked_by_git():
     try:
         tracked = subprocess.run(
             ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
-        ).stdout.split("
-")
+        ).stdout.splitlines()
     except (subprocess.CalledProcessError, FileNotFoundError):  # pragma: no cover
         pytest.skip("git not available")
 
