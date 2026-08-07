@@ -44,3 +44,11 @@ desktop.ini
 #   The *.xlsx rule above exists to keep generated exports out of the repo;
 #   this one file is not an export, it is the source. See reference/README.md.
 !reference/*.xlsx
+#
+#   assumptions/*.csv  -- the Tontine liability run-off curve exported from the
+#   actuarial model. The *.csv rule above is aimed at generated data dumps in
+#   dist/; this one is INPUT the engine cannot run without. It was silently
+#   swallowed once and CI caught it, which is the second time a broad
+#   extension rule has eaten a source file here. Anything under assumptions/
+#   is input by definition.
+!assumptions/*.csv

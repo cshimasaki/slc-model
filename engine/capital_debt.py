@@ -33,10 +33,12 @@ from .macro import MacroSeries
 from .state import ModelState
 
 # Loaded once. The curve is a fixed data file, not per-run state.
-try:
-    runoff_curve = tontine_runoff.load_curve()
-except tontine_runoff.RunoffError:  # pragma: no cover - only if the CSV is missing
-    runoff_curve = None
+#
+# Deliberately NOT wrapped in a try/except. An earlier version swallowed a
+# missing curve into `None`, which turned "the mortality data is absent" into
+# an obscure crash thousands of lines later. The file is required input; if it
+# is gone, saying so at import is the useful behaviour.
+runoff_curve = tontine_runoff.load_curve()
 
 
 def _fund_year(c, i: int) -> int:

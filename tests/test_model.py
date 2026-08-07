@@ -450,6 +450,47 @@ def test_coupon_basis_delivers_the_designed_investor_return():
     assert -sum(nominal.state.capital.tf_interest) > -sum(c.tf_interest)
 
 
+def test_every_input_file_is_tracked_by_git():
+    """
+    A file the model needs must be in the repo, not just on someone's disk.
+
+    This has now bitten twice. A broad `*.xlsx` rule swallowed the source
+    workbook, and a broad `*.csv` rule swallowed the Tontine run-off curve --
+    both source data sitting behind extension rules aimed at generated
+    exports. Locally everything works; a fresh clone fails, and the error
+    surfaces far from its cause.
+
+    Rather than list files, this asks git directly whether anything the engine
+    loads is being ignored.
+    """
+    import subprocess
+
+    inputs = [
+        os.path.join("assumptions", "base.yaml"),
+        os.path.join("assumptions", "optimistic.yaml"),
+        os.path.join("assumptions", "stress.yaml"),
+        os.path.join("assumptions", "labels.yaml"),
+        os.path.join("assumptions", "tontine_runoff.csv"),
+        os.path.join("validation", "port_reference", "base.yaml"),
+    ]
+
+    try:
+        tracked = subprocess.run(
+            ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
+        ).stdout.split("
+")
+    except (subprocess.CalledProcessError, FileNotFoundError):  # pragma: no cover
+        pytest.skip("git not available")
+
+    tracked = {line.replace("/", os.sep) for line in tracked if line}
+    for path in inputs:
+        assert os.path.exists(os.path.join(ROOT, path)), f"missing input file: {path}"
+        assert path in tracked, (
+            f"{path} exists locally but git is not tracking it -- a fresh clone "
+            f"would fail. Check .gitignore for a broad extension rule."
+        )
+
+
 # --------------------------------------------------- operating efficiency ---
 
 def test_efficiency_curve_shape():
