@@ -36,6 +36,12 @@ community_shares:
 rent_yield:
   void_rate: 0.15            # was 0.05 — properties stand empty
 
+bequests_gifts:
+  # No property gifts at all. Gifts are earned by demonstrated benefit, and the
+  # stress case is precisely the world where that case never becomes compelling
+  # enough for someone to hand over a house.
+  gift_property_start_yr: 0  # was 15; 0 = never
+
 market_shock:
   hpi_shock_year: 5          # was 0 (dormant) — fires the -20% shock inherited from Base
   rent_shock_years: 2        # was 0 — rent growth held at the inherited 0% for two years

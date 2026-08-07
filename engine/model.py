@@ -87,7 +87,7 @@ def run(
         growth.opening_portfolio(s, i)
         growth.costs_and_capacity(s, a, m, i)
         growth.growth_curve(s, a, i)
-        growth.acquisitions(s, i)
+        growth.acquisitions(s, a, i)
         growth.admin_costs(s, a, m, i)
 
         # 4. The portfolio those acquisitions produce.

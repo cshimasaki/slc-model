@@ -36,8 +36,14 @@ def profit_and_loss(s: ModelState, a: Assumptions, i: int) -> None:
     f, c, A, g = s.statements, s.capital, s.assets, s.growth
 
     f.rental_income.append(A.net_rental_income[i])                       # row 10
-    f.gifts_and_bequests.append(                                         # row 11
+    # Row 11. A property given outright is income, recognised at market value
+    # in the year it arrives -- otherwise the house would appear as an asset
+    # with nothing on the other side and the balance sheet would not balance.
+    # It is stripped back out of the cash-flow statement below, since no cash
+    # changed hands.
+    f.gifts_and_bequests.append(
         c.gifts_living[i] + c.bequests[i] + c.founding_capital[i]
+        + A.gift_property_value[i]
     )
     f.gift_aid.append(c.gift_aid[i])                                     # row 12
     f.total_income.append(f.rental_income[i] + f.gifts_and_bequests[i] + f.gift_aid[i])
@@ -103,9 +109,16 @@ def cash_flow(s: ModelState, a: Assumptions, i: int) -> None:
 
     f.cf_dividends_paid.append(f.dividends[i])                           # row 51
     f.cf_tax_paid.append(f.corporation_tax[i])                           # row 52
+
+    # Remove the property gift recognised in income above: it is an asset
+    # arriving, not money arriving. Same treatment as the Tontine indexation
+    # uplift, which is a charge that never leaves the bank account.
+    f.cf_less_noncash_gifts.append(-A.gift_property_value[i])
+
     f.cf_from_operations.append(                                         # row 53
         f.cf_operating_surplus[i] + f.cf_interest_paid[i]
         + f.cf_dividends_paid[i] + f.cf_tax_paid[i]
+        + f.cf_less_noncash_gifts[i]
     )
 
     f.cf_property_purchases.append(-A.purchase_price[i])                 # row 54 (negated)

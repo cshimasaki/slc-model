@@ -141,11 +141,39 @@ def growth_curve(s: ModelState, a: Assumptions, i: int) -> None:
     )
 
 
-def acquisitions(s: ModelState, i: int) -> None:
-    """Rows 10-11 -- take the lower of want and can, and roll the portfolio."""
+def acquisitions(s: ModelState, a: Assumptions, i: int) -> None:
+    """
+    Rows 10-11 -- take the lower of want and can, then add any gifts.
+
+    Purchases are the lower of the growth curve and what the funding affords.
+    Gifted properties are neither: nobody's affordability test applies to a
+    house someone gives you, and no growth curve produces one. They arrive on
+    their own terms and are simply added.
+
+    That is also why they compound so strongly. A gift raises the portfolio
+    value, which raises next year's LTV headroom, which buys more houses --
+    without ever having consumed funding capacity itself.
+    """
     g = s.growth
+    year = i + 1
+
     g.properties_acquired.append(min(g.curve_properties[i], g.affordable_properties[i]))
-    g.portfolio_closing.append(g.portfolio_opening[i] + g.properties_acquired[i])
+
+    # Fractional entitlement accumulates until it crosses a whole house, so a
+    # rate of 0.5 means one house every other year rather than half a house
+    # every year. Portfolio counts stay whole numbers.
+    start = getattr(a, "gift_property_start_yr", 0)
+    rate = getattr(a, "gift_property_rate", 0.0)
+    if start and rate > 0 and year >= start:
+        earned = (year - start + 1) * rate
+        already = sum(g.properties_gifted)
+        gifted = float(int(earned - already))
+    else:
+        gifted = 0.0
+    g.properties_gifted.append(max(0.0, gifted))
+
+    g.properties_added.append(g.properties_acquired[i] + g.properties_gifted[i])
+    g.portfolio_closing.append(g.portfolio_opening[i] + g.properties_added[i])
 
 
 def admin_costs(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:

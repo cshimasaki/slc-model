@@ -146,6 +146,19 @@ bequests_gifts:
     label: "Founding capital injection (Year 1 only)"
     unit: "£"
     row: 38
+  gift_property_start_yr:
+    label: "Property gifts — first year gifts begin accruing (0 = never)"
+    unit: "model year"
+    # Added Aug 2026, after the port. No row in Control & Parameters.
+    row: 0
+  gift_property_rate:
+    label: "Property gifts — properties per year once started"
+    unit: "properties p.a."
+    row: 0
+  gift_property_retrofit_mult:
+    label: "Property gifts — retrofit on receipt, multiple of standard"
+    unit: "x"
+    row: 0
   beq_growth_mult:
     label: "Real growth multiplier"
     unit: "% p.a."

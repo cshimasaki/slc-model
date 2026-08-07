@@ -158,6 +158,92 @@ Two caveats recorded rather than buried:
 
 ---
 
+## Property gifts — capital contributed in kind
+**Branch:** `structure/property-gifts` · **Date:** 2026-08-07 · **Decision:** adopt
+
+**Hypothesis.** The model could only represent gifts as *cash*. A house given
+outright is structurally different: no purchase price, no debt, no LTV draw,
+and it earns rent from the year it arrives. Exploratory runs suggested this was
+the single strongest lever in the model — the only route that reached a large
+portfolio with **zero covenant breaches** — so it was worth representing
+properly rather than proxying with cash.
+
+There is also a strategic reason, which is the reason it was raised: **there is
+currently no vehicle for gifting property in Stroud, or in much of the UK.**
+
+**What changed.** A distinct gift channel, parameterised by a start year, a
+rate, and a retrofit multiple:
+
+- Gifts bypass the affordability test entirely. Nobody's funding capacity
+  applies to a house someone gives you, and no growth curve produces one.
+- The house is recognised as **income at market value** in the year it arrives,
+  and stripped straight back out of the cash-flow statement — the same
+  treatment the Tontine indexation uplift gets. Without the income recognition
+  the balance sheet stops balancing; without the cash-flow reversal the model
+  would think a house was money.
+- Fractional rates accumulate: 0.5 a year means one house every other year, not
+  half a house annually. Portfolio counts stay whole.
+- Gifted stock carries a higher retrofit cost (3x standard), being older and
+  less chosen than a property bought on the market.
+
+**Conservative by construction.** Gifts are treated as *earned by demonstrated
+community benefit*, not assumed — hence a start year, not just a rate. Base
+assumes nothing at all for fourteen years. Stress assumes a gift never arrives,
+because the stress case is precisely the world where the case is never made
+compellingly enough for anyone to hand over a house.
+
+**Result.**
+
+| | Base | Base + gifts | Optimistic | Opt + gifts | Stress |
+|---|---|---|---|---|---|
+| Gifts received | 0 | 18 (from yr 16) | 0 | 41 (from yr 10) | 0 |
+| Properties Y50 | 71 | **100** | 151 | **235** | 36 |
+| Years below 1.20x | 16 | **9** | 0 | 0 | 22 |
+| Net assets Y50 | £98m | **£143m** | £282m | **£465m** | £104m |
+
+Base covenant breaches nearly halve and net assets rise 46%, on an assumption
+of one house every other year starting in year 16. Tontine drawdown is
+unchanged in every scenario: gifts do not displace borrowing, they add to it.
+
+**A caveat that emerged from a failing test.** Gifts are not free. A larger
+portfolio carries more admin and sinking-fund cost, and gifted houses need
+retrofitting, so purchases in individual later years can *fall* relative to a
+no-gift run. The first gift year isolates the question cleanly and confirms no
+displacement there; beyond it, only the outcome is asserted. The test was
+written asserting the wrong thing first, and the model was right.
+
+**Decision: adopt**, with the conservative Base parameters above.
+
+---
+
+## Housing Commons and RCOs — deliberately out of scope
+**Date:** 2026-08-07 · **Decision:** park, as a separate model
+
+Recorded so that the absence is legible as a decision rather than an oversight.
+
+Rent Credit Obligations are the intended long-run capital vehicle: investors buy
+RCOs at a discount, the capital buys property **debt-free**, and tenants then
+buy RCOs from investors to pay rent in lieu of cash, always below market rent.
+The investor's return is the discount margin. RCOs are denominated in **square
+metres**, so they are inflation-proof by construction rather than by indexation,
+and they retire on redemption over roughly 25 years — as they retire, rent falls
+for everyone until it reaches maintenance cost.
+
+**This does not belong in this model.** In the RCO vehicle each property is
+designed to net *zero* surplus (16.6% operations, 83.4% redeemed to investors).
+There is no debt, no coupon, no DSCR and no LTV. This model's entire spine is
+borrow-against-portfolio, service-the-debt, watch-the-covenant. Grafting one
+onto the other would not extend either; it would corrupt both.
+
+Two vehicles, two models, one shared reality. The intended path is a gradual
+transition from Tontine toward community shares and RCOs as trust and evidence
+accumulate — see the transition note below, which remains the right place for
+the *interface* between them.
+
+Source: `Housing Commons Draft Prospectus.pdf`.
+
+---
+
 ## Planned — not yet started
 
 Recorded 2026-08-07 from the design discussion, so the sequence is not lost.

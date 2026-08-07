@@ -189,6 +189,100 @@ def test_invariant_check_can_fail():
         _check_invariants(result.state, result.n_years, len(result.state.monthly.month))
 
 
+# ------------------------------------------------------- property gifts ---
+
+def test_gifts_wait_for_the_start_year():
+    """Nothing arrives before the Commons has earned it."""
+    r = run("base")
+    a = r.assumptions
+    for i in range(a.gift_property_start_yr - 1):
+        assert r.state.growth.properties_gifted[i] == 0, f"a gift arrived in year {i + 1}"
+    assert sum(r.state.growth.properties_gifted) > 0, "no gift ever arrived"
+
+
+def test_gifts_are_whole_houses_arriving_lumpily():
+    """
+    A rate of 0.5 means one house every other year, not half a house a year.
+
+    Fractional houses would be nonsense in themselves and would also break the
+    whole-number portfolio counts the rest of the model relies on.
+    """
+    r = run("base")
+    gifted = r.state.growth.properties_gifted
+    assert all(float(g).is_integer() for g in gifted), "a fractional house was gifted"
+
+    a = r.assumptions
+    span = len(gifted) - (a.gift_property_start_yr - 1)
+    expected = int(span * a.gift_property_rate)
+    assert abs(sum(gifted) - expected) <= 1, (
+        f"gifted {sum(gifted)} houses over {span} years at {a.gift_property_rate}/yr; "
+        f"expected about {expected}"
+    )
+
+
+def test_stress_never_receives_a_gift():
+    """Gifts are earned; the stress case is where the case is never made."""
+    r = run("stress")
+    assert sum(r.state.growth.properties_gifted) == 0
+
+
+def test_gifted_property_is_income_and_asset_but_never_cash():
+    """
+    The accounting that makes a gift honest.
+
+    A donated house has to be recognised as income, or it appears as an asset
+    with nothing on the other side and the balance sheet stops balancing. But
+    it must not touch cash. Getting one of those right and not the other is the
+    easy mistake, so both are asserted.
+    """
+    r = run("base")
+    A, f, g = r.state.assets, r.state.statements, r.state.growth
+
+    year = next(i for i, n in enumerate(g.properties_gifted) if n > 0)
+
+    assert A.gift_property_value[year] > 0
+    # Recognised in income...
+    assert f.gifts_and_bequests[year] >= A.gift_property_value[year]
+    # ...and removed again from the cash-flow statement.
+    assert f.cf_less_noncash_gifts[year] == pytest.approx(-A.gift_property_value[year])
+    # Never counted as money paid for property.
+    assert f.cf_property_purchases[year] == pytest.approx(-A.purchase_price[year])
+    assert A.purchase_price[year] == pytest.approx(
+        g.properties_acquired[year] * r.macro.avg_price[year]
+    )
+
+
+def test_gifts_do_not_consume_funding_capacity():
+    """
+    A house someone gives you is not something you can afford or not afford.
+
+    Gifts must bypass the affordability test entirely -- if they were netted
+    against funding capacity they would displace purchases rather than add to
+    them, and the whole point would be lost.
+    """
+    from engine.assumptions import load
+
+    without = load("base")
+    without.values["gift_property_start_yr"] = 0
+    withgifts = load("base")
+
+    a, b = run(without), run(withgifts)
+    assert sum(b.state.growth.properties_gifted) > 0
+
+    # In the first gift year the two runs are otherwise identical, so this
+    # isolates the question cleanly: the gift must not displace a purchase.
+    first = next(i for i, n in enumerate(b.state.growth.properties_gifted) if n > 0)
+    assert b.state.growth.properties_acquired[first] == a.state.growth.properties_acquired[first]
+    assert b.state.growth.properties_added[first] > a.state.growth.properties_added[first]
+
+    # Beyond that year the trajectories legitimately diverge -- a larger
+    # portfolio carries more admin and sinking-fund cost, and gifted houses
+    # need retrofitting -- so purchases in any single later year may be higher
+    # or lower. What must hold is the outcome.
+    assert b.state.growth.portfolio_closing[-1] > a.state.growth.portfolio_closing[-1]
+    assert b.state.statements.net_assets[-1] > a.state.statements.net_assets[-1]
+
+
 # -------------------------------------------------------- excel semantics ---
 
 def test_excel_round_is_half_away_from_zero():

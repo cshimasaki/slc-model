@@ -34,6 +34,11 @@ bequests_gifts:
   gift_baseline: 60000       # was 40000
   beq_baseline: 90000        # was 60000
   beq_growth_mult: 0.02      # was 0.0 — giving grows in real terms
+  # Credibility arrives sooner and compounds: the Commons demonstrates benefit
+  # earlier, so property gifts start at year 10 rather than 15 and run at one a
+  # year rather than one every other year.
+  gift_property_start_yr: 10  # was 15
+  gift_property_rate: 1.0     # was 0.5
 
 rent_yield:
   gross_yield: 0.055         # was 0.05
