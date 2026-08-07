@@ -1,11 +1,19 @@
 # Stroud Land Commons — financial model
 
+[![Tests & Excel validation](https://github.com/cshimasaki/slc-model/actions/workflows/ci.yml/badge.svg)](https://github.com/cshimasaki/slc-model/actions/workflows/ci.yml)
+
 A 50-year projection of the Stroud Land Commons: a community land trust that
 buys homes using a **Tontine fund** (a closed-end lifetime annuity mutual),
 **community shares** (junior debt), and gifts and bequests.
 
 Ported from `Financial Modelling for SLC V2.1.xlsx`, and validated
 number-for-number against it across all three scenarios.
+
+**→ [Open the interactive explorer](https://cshimasaki.github.io/slc-model/)**
+
+The badge above is not decoration: it goes red the moment the Python model
+stops reproducing the original spreadsheet, cell for cell, across all three
+scenarios.
 
 ## Three layers, kept separate
 
