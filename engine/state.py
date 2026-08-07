@@ -41,6 +41,9 @@ class GrowthState:
     affordable_properties: list[float] = field(default_factory=_years)  # row 25
     curve_properties: list[float] = field(default_factory=_years)       # row 26
     tontine_available: list[float] = field(default_factory=_years)      # row 27
+    # Added Aug 2026: the scale-efficiency multiplier on per-property
+    # operating costs. Not in the workbook, so absent from ROW_MAP.
+    opex_scale_factor: list[float] = field(default_factory=_years)
 
     ROW_MAP = {
         9: "portfolio_opening", 10: "properties_acquired", 11: "portfolio_closing",

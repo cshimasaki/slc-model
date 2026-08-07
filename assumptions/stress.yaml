@@ -45,3 +45,8 @@ bequests_gifts:
 market_shock:
   hpi_shock_year: 5          # was 0 (dormant) — fires the -20% shock inherited from Base
   rent_shock_years: 2        # was 0 — rent growth held at the inherited 0% for two years
+
+operating_efficiency:
+  # No scale economies materialise. Contractors do not discount, the service
+  # company never gets good enough at it, and cost per property stays flat.
+  opex_learning_rate: 1.0        # was 0.92 — mechanism off

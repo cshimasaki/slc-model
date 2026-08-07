@@ -431,6 +431,59 @@ confirming intent.
 
 ---
 
+## Operating efficiency from scale
+**Branch:** `structure/property-gifts` (folded in) · **Date:** 2026-08-07 · **Decision:** adopt
+
+**Hypothesis.** Per-property running costs were flat forever — £150 admin and
+£700 maintenance per house, whether the estate holds five houses or two
+hundred. That understates a real effect: materials bought in bulk, gas safety
+checks batched across a round rather than booked singly, and enough contracted
+volume to negotiate on price.
+
+**What changed.** `engine/efficiency.py` applies a **learning curve** — unit
+cost falls by a fixed proportion for every *doubling* of the portfolio, floored.
+Base: 8% per doubling, floor 65%. Optimistic 12% and floor 55%; Stress switches
+the mechanism off entirely, on the view that the savings simply never
+materialise.
+
+Applies to `admin_per_prop` and `maint_per_prop`. Deliberately **not** to
+`sinking_per_prop`: that is a provision against future capital works, not a
+running cost, and buying scaffolding more cheaply does not mean the roof needs
+replacing less often. Scaling it would quietly under-provision a growing
+portfolio, so a test pins it.
+
+**Result.**
+
+| Houses | Cost factor | Saving | Admin/prop | Maint/prop |
+|---|---|---|---|---|
+| 1 | 1.000 | — | £150 | £700 |
+| 10 | 0.758 | 24% | £114 | £531 |
+| 25 | 0.679 | 32% | £102 | £475 |
+| 50+ | 0.650 | 35% | £98 | £455 |
+
+Base: 50-year admin and maintenance falls **£5.41m → £3.53m**, cash cover
+1.97 → 2.02, net assets £170m → £172m.
+
+**Two things worth stating plainly.**
+
+*The floor binds at about fifty houses.* So this parameterisation says most of
+the saving is banked by house 50 and the two-hundredth buys nothing further.
+That is a claim about procurement leverage, and it is the parameter to argue
+with — not the curve.
+
+*The effect is second-order.* £1.9m saved over fifty years against £6.8m of
+interest. Worth having, and worth not overselling: it does not change viability
+the way the coupon correction did.
+
+**What is not modelled: where the saving goes.** Here it improves the surplus
+and stays with the Commons. The stated intent is to share it between tenants
+and investors and most likely to consume it through retrofitting — a rent
+reduction and capex respectively. Neither is represented, so these figures are
+the size of the prize, not the gain to the balance sheet. Modelling the
+distribution is the obvious follow-on.
+
+---
+
 ## Planned — not yet started
 
 Recorded 2026-08-07 from the design discussion, so the sequence is not lost.

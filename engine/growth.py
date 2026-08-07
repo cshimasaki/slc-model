@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import math
 
+from . import efficiency
 from .assumptions import Assumptions
 from .excelfns import excel_int, excel_round, prior
 from .macro import MacroSeries
@@ -201,7 +202,14 @@ def admin_costs(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
 
     # Row 19: charged on the closing portfolio, so properties bought this year
     # carry a full year of admin even though they may complete in month 12.
-    g.admin_variable.append(a.admin_per_prop * g.portfolio_closing[i] * m.cost_index[i])
+    #
+    # Scaled down as the estate grows: administering fifty houses costs less
+    # per house than administering five. See engine/efficiency.py.
+    scale = efficiency.factor_for(a, g.portfolio_closing[i])
+    g.admin_variable.append(
+        a.admin_per_prop * scale * g.portfolio_closing[i] * m.cost_index[i]
+    )
+    g.opex_scale_factor.append(scale)
 
     g.admin_total.append(                                                # row 20
         g.admin_board[i] + g.admin_accounting[i] + g.admin_fca[i]

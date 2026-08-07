@@ -450,6 +450,69 @@ def test_coupon_basis_delivers_the_designed_investor_return():
     assert -sum(nominal.state.capital.tf_interest) > -sum(c.tf_interest)
 
 
+# --------------------------------------------------- operating efficiency ---
+
+def test_efficiency_curve_shape():
+    """Falls with scale, monotonically, and stops at the floor."""
+    from engine.efficiency import scale_factor
+
+    rate, floor = 0.92, 0.65
+    factors = [scale_factor(n, rate, floor) for n in (1, 2, 5, 10, 25, 50, 200)]
+
+    assert factors[0] == 1.0, "a single property has no scale to exploit"
+    assert all(b <= a for a, b in zip(factors, factors[1:])), "cost per property rose with scale"
+    assert min(factors) >= floor
+    # Each doubling takes the stated proportion off, until the floor bites.
+    assert scale_factor(2, rate, 0.0) == pytest.approx(rate)
+    assert scale_factor(4, rate, 0.0) == pytest.approx(rate ** 2)
+
+
+def test_efficiency_can_be_switched_off():
+    """A learning rate of 1.0 means no scale economies at all."""
+    from engine.efficiency import scale_factor
+
+    assert all(scale_factor(n, 1.0, 0.65) == 1.0 for n in (1, 10, 200))
+
+
+def test_efficiency_lowers_running_costs_but_not_the_sinking_fund():
+    """
+    The saving applies to running costs, never to the provision.
+
+    A sinking fund contribution is money set aside against future capital
+    works. Buying scaffolding more cheaply does not mean the roof needs
+    replacing less often, so scaling the provision with estate size would
+    quietly under-provision a growing portfolio.
+    """
+    from engine.assumptions import load
+
+    off = load("base")
+    off.values["opex_learning_rate"] = 1.0
+    on = load("base")
+
+    a, b = run(off), run(on)
+
+    # Running costs fall...
+    assert sum(b.state.growth.admin_variable) < sum(a.state.growth.admin_variable)
+    assert sum(-v for v in b.state.assets.maintenance_spend) < sum(
+        -v for v in a.state.assets.maintenance_spend
+    )
+    # ...the provision does not, at equal portfolio size.
+    for i, (x, y) in enumerate(
+        zip(a.state.growth.portfolio_closing, b.state.growth.portfolio_closing)
+    ):
+        if x == y:
+            assert a.state.assets.sinking_contribution[i] == pytest.approx(
+                b.state.assets.sinking_contribution[i]
+            ), f"year {i + 1}: the sinking fund provision was scaled by efficiency"
+
+
+def test_stress_assumes_no_efficiency_gain():
+    """Stress is the world where the savings never materialise."""
+    from engine.assumptions import load
+
+    assert load("stress").opex_learning_rate == 1.0
+
+
 # ------------------------------------------------------- interest cover ---
 
 @pytest.mark.parametrize("scenario", SCENARIOS)

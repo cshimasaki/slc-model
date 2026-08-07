@@ -45,6 +45,11 @@ rent_yield:
   lc_share: 0.85             # was 0.80 — a larger share of rent to the Commons
   void_rate: 0.03            # was 0.05
 
+operating_efficiency:
+  # The service company matures faster and negotiates harder.
+  opex_learning_rate: 0.88       # was 0.92 — 12% off per doubling
+  opex_efficiency_floor: 0.55    # was 0.65
+
 growth_curve:
   logistic_ceiling: 250      # was 200 properties
   logistic_dbl_yrs: 3        # was 4 years

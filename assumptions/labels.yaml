@@ -302,6 +302,17 @@ growth_curve:
     unit: "years"
     row: 73
 
+operating_efficiency:
+  _title: "Operating Efficiency (scale economies)"
+  opex_learning_rate:
+    label: "Saving per doubling of the portfolio (0.92 = 8% cheaper each doubling)"
+    unit: "x"
+    row: 0
+  opex_efficiency_floor:
+    label: "Floor on per-property cost, as a share of the small-scale cost"
+    unit: "x"
+    row: 0
+
 capex_maintenance:
   _title: "Capex & Maintenance"
   sinking_per_prop:

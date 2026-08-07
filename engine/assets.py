@@ -17,6 +17,7 @@ Cohort values follow house prices; cohort rents follow rent inflation.
 
 from __future__ import annotations
 
+from . import efficiency
 from .assumptions import Assumptions
 from .excelfns import prior
 from .macro import MacroSeries
@@ -142,8 +143,16 @@ def sinking_fund(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
         a.sinking_per_prop * s.growth.portfolio_closing[i] * m.cost_index[i]
     )
     A.sinking_return.append(A.sinking_opening[i] * a.sinking_return)     # row 133
-    A.maintenance_spend.append(                                          # row 134 (negative)
-        -a.maint_per_prop * s.growth.portfolio_closing[i] * m.cost_index[i]
+    # Row 134: negative. Also scaled by estate size -- bulk materials, gas
+    # safety checks batched across a round of properties rather than booked
+    # singly, and enough contracted volume to negotiate on price.
+    #
+    # The sinking fund CONTRIBUTION above is deliberately not scaled: it is a
+    # provision against future capital works, not a running cost, and the roof
+    # still needs replacing whatever the estate paid for the scaffolding.
+    scale = efficiency.factor_for(a, s.growth.portfolio_closing[i])
+    A.maintenance_spend.append(
+        -a.maint_per_prop * scale * s.growth.portfolio_closing[i] * m.cost_index[i]
     )
     A.sinking_closing.append(                                            # row 135
         A.sinking_opening[i] + A.sinking_contribution[i]

@@ -188,6 +188,31 @@ growth_curve:
   logistic_ceiling: 200          # Logistic ceiling, max portfolio (properties)
   logistic_dbl_yrs: 4            # Doubling rate (years)
 
+operating_efficiency:
+  # Per-property running costs fall as the estate grows: materials bought in
+  # bulk, gas safety checks batched across a round of properties rather than
+  # booked one at a time, and enough contracted volume to negotiate on price.
+  #
+  # A learning curve, the standard form for procurement: unit cost falls by a
+  # fixed proportion for every DOUBLING of the portfolio. The shape is the
+  # point -- the first ten houses buy most of the saving, the two hundredth
+  # buys almost none.
+  #
+  # Applies to `admin_per_prop` and `maint_per_prop`. NOT to
+  # `sinking_per_prop`, which is a provision against future capital works
+  # rather than a running cost: the roof still needs replacing whatever the
+  # estate paid for the scaffolding.
+  #
+  # WHERE THE SAVING GOES IS NOT MODELLED. Here it simply improves the surplus
+  # and stays with the Commons. The intent is to share it between tenants and
+  # investors and most likely consume it through retrofitting -- a rent
+  # reduction and capex respectively, neither of which is represented. Read
+  # these figures as the size of the prize, not the gain to the balance sheet.
+  #
+  # Set opex_learning_rate to 1.0 to switch the whole mechanism off.
+  opex_learning_rate: 0.92       # each doubling of the portfolio takes 8% off per-property cost
+  opex_efficiency_floor: 0.65    # never below 65% of the small-scale cost
+
 capex_maintenance:
   sinking_per_prop: 1500         # Sinking fund contribution (£ / property / yr)
   maint_per_prop: 700            # Structural maintenance spend (£ / property / yr)
