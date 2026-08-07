@@ -413,6 +413,43 @@ def test_release_never_fully_discharges_while_liability_remains():
             )
 
 
+def test_coupon_basis_delivers_the_designed_investor_return():
+    """
+    The investor must receive the real return the design specifies.
+
+    The principal is CPI-uplifted and never repaid, so the investor's entire
+    return is the coupon paid on a base that already grows with inflation.
+    Their inflation protection is therefore delivered by the indexation, and
+    the coupon should be the real spread alone.
+
+    The workbook added CPI to the rate as well, handing the investor CPI twice
+    and doubling their real return. This test is what stops that returning.
+    """
+    from engine.assumptions import load
+
+    a = load("base")
+    assert a.pf_coupon_basis == "real"
+    r = run(a)
+    m, c = r.macro, r.state.capital
+
+    # Under "real" the coupon is the spread, flat, whatever CPI does.
+    for i, rate in enumerate(c.tf_coupon_rate):
+        assert rate == pytest.approx(a.pf_coupon_spread), f"year {i + 1}"
+
+    # And the real return to the investor is the designed annuity rate.
+    real_return = a.pf_coupon_spread - a.pf_fund_op_margin - a.pf_fund_reg_charge
+    assert real_return == pytest.approx(a.pf_investor_rate)
+
+    # The workbook basis pays strictly more, and CPI more.
+    b = load("base")
+    b.values["pf_coupon_basis"] = "nominal"
+    nominal = run(b)
+    assert nominal.state.capital.tf_coupon_rate[0] == pytest.approx(
+        a.pf_coupon_spread + m.cpi_rate[0]
+    )
+    assert -sum(nominal.state.capital.tf_interest) > -sum(c.tf_interest)
+
+
 # ------------------------------------------------------- interest cover ---
 
 @pytest.mark.parametrize("scenario", SCENARIOS)

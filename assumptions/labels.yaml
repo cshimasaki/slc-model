@@ -39,6 +39,10 @@ tontine_fund:
     label: "Target investor annuity rate — spread over index"
     unit: "% p.a."
     row: 14
+  pf_coupon_basis:
+    label: "Coupon basis (real = spread only; nominal = CPI + spread, the workbook error)"
+    unit: "text"
+    row: 0
   pf_fund_op_margin:
     label: "Fund operating cost margin"
     unit: "% p.a."

@@ -38,6 +38,17 @@ tontine_fund:
   # at 2.13x its liabilities, i.e. the instrument can support a lower coupon
   # than it was originally given.
   pf_investor_rate: 0.025        # Target investor annuity rate, spread over index (% p.a.)
+
+  # How the coupon rate is applied to the (already CPI-uplifted) principal.
+  #   real     coupon = spread only. The investor's inflation protection
+  #            comes from the growing principal; the spread is their real
+  #            return. Matches the indicative actuarial model and the
+  #            design intent of a CPI + 2.5% annuity.
+  #   nominal  coupon = CPI + spread, as the original workbook had it.
+  #            Applied to an indexed principal this pays CPI twice and
+  #            doubles the investor's real return -- 5.0% instead of 2.5%.
+  # See MODEL_LOG: this was an error inherited from the spreadsheet.
+  pf_coupon_basis: real
   pf_fund_op_margin: 0.005       # Fund operating cost margin (% p.a.)
   pf_fund_reg_charge: 0.0025     # Fund regulatory capital charge (% p.a.)
   pf_max_raise: 50000000         # Tontine maximum raise (£)

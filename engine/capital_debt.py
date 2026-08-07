@@ -189,8 +189,27 @@ def tontine(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
     )
     c.tf_cum_raised_closing.append(c.tf_cum_raised_opening[i] + c.tf_drawdown[i])  # row 38
 
-    # Row 39: the coupon floats with CPI, plus the fixed spread.
-    c.tf_coupon_rate.append(m.cpi_rate[i] + a.pf_coupon_spread)
+    # Row 39: the coupon rate.
+    #
+    # The principal is ALREADY uplifted by CPI each year (row 31), and no
+    # principal is ever repaid -- so the investor's entire return is the
+    # coupon, paid on a base that grows with inflation. Their inflation
+    # protection is therefore already delivered by the indexation.
+    #
+    #   "real"     coupon = spread. The investor receives CPI (through the
+    #              growing principal) plus the spread. This is what the
+    #              indicative actuarial model does, and it matches the design
+    #              intent of a CPI + 2.5% annuity.
+    #   "nominal"  coupon = CPI + spread, the original workbook's formula.
+    #              Applied to an already-indexed principal it hands the
+    #              investor CPI twice, doubling their real return.
+    #
+    # "nominal" is retained only so the model still reproduces the
+    # spreadsheet. See MODEL_LOG.
+    if getattr(a, "pf_coupon_basis", "nominal") == "real":
+        c.tf_coupon_rate.append(a.pf_coupon_spread)
+    else:
+        c.tf_coupon_rate.append(m.cpi_rate[i] + a.pf_coupon_spread)
 
     # Row 40: interest on the indexed opening balance, with a half-year charged
     # on the money drawn during the year.

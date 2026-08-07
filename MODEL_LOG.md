@@ -367,6 +367,70 @@ which is failing today for eighteen years and is the one to manage against.
 
 ---
 
+## The coupon was charging inflation twice
+**Branch:** `structure/property-gifts` (folded in) · **Date:** 2026-08-07 · **Decision:** adopt · **Impact: the largest in the project so far**
+
+**How it surfaced.** Decomposing why Stress fails so badly. CPI alone accounts
+for nearly all of it — Base plus CPI 4.5% gives 0.73x, identical to full
+Stress. Letting rent track CPI barely helped (0.73 → 0.77), which did not fit
+an instrument supposedly hedged against inflation on both sides. That
+mismatch was the thread worth pulling.
+
+**The error.** The Tontine principal is uplifted by CPI every year, and **no
+principal is ever repaid** — so the investor's entire return is the coupon,
+paid on a base that already grows with inflation. Their inflation protection is
+delivered by the indexation.
+
+The workbook then set the coupon rate to **CPI + spread** and applied it to
+that already-indexed principal. The investor receives CPI twice.
+
+| | Real return to the investor |
+|---|---|
+| Design intent | **2.50%** |
+| Indicative actuarial model (3.25% flat on indexed principal) | **2.50%** ✓ |
+| Workbook / our port (CPI + 3.25% on indexed principal) | **5.00%** ✗ |
+
+The actuarial model is unambiguous in its own arithmetic: charge principal
+£50m real, charge income £1.625m real, exactly 3.25%. Its note reading
+"CPI + 3.25% on the inflating principal" describes the investor's *total*
+nominal return — CPI via the principal, 3.25% via the coupon — not the rate to
+apply.
+
+At CPI 2.5% the workbook overstates SLC's interest cost by **95%**.
+
+**What changed.** `pf_coupon_basis`: `real` (coupon = spread) or `nominal`
+(coupon = CPI + spread, the workbook). Base is now `real`; the port reference
+keeps `nominal`, so the Excel comparison still passes all 13,150 cells.
+
+**Result — every scenario becomes viable.**
+
+| | Min cash cover | Years <1.25x | Self-financing from | 50-yr interest | Net assets |
+|---|---|---|---|---|---|
+| Base, workbook | 1.04 | 10 | year 19 | £12.8m | £140m |
+| **Base, corrected** | **1.97** | **0** | **year 6** | **£6.8m** | **£170m** |
+| Stress, workbook | 0.73 | 27 | year 36 | £19.7m | £102m |
+| **Stress, corrected** | **1.74** | **0** | **year 11** | **£8.3m** | **£170m** |
+| Optimistic, corrected | 2.91 | 0 | year 3 | £7.4m | £502m |
+
+**Stress now clears the 1.25x covenant in every year**, which no amount of
+parameter tuning had achieved. The apparent precariousness of the whole plan
+was substantially an artefact of this one formula.
+
+One reading note: minimum *rent-only* cover looks worse after the fix
+(−2.62 → −4.63). That is an artefact of a ratio with a much smaller
+denominator in the earliest years, when interest is tiny and the numerator is
+negative. The meaningful measure is the first self-financing year, which
+improves from 19 to 6.
+
+**Decision: adopt**, with a caveat that this should be confirmed with whoever
+built V2.1 before it drives external figures. It is a material change to the
+economics and it contradicts the spreadsheet. The evidence — the actuarial
+model's own arithmetic, and the design-intent check on the investor's real
+return — is strong, but "the model says so" is not the same as the designer
+confirming intent.
+
+---
+
 ## Planned — not yet started
 
 Recorded 2026-08-07 from the design discussion, so the sequence is not lost.
