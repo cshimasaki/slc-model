@@ -484,6 +484,100 @@ distribution is the obvious follow-on.
 
 ---
 
+## Investor rate raised to CPI + 4.25%, and the analysis around it
+**Branch:** `pricing/investor-rate-4.25` · **Date:** 2026-08-20 · **Decision:** adopt, with an open question
+
+**Why.** The principal is never repaid, so the coupon is the investor's entire
+return. At 2.5% an investor recovers ~55% of capital over their expected life
+and breaks even at age 104 — i.e. never, under any outcome. That is
+philanthropy with a yield, not a bet on longevity, and it will not raise money
+from anyone comparing it with an annuity.
+
+**The frontier.** Ceiling = highest coupon with zero covenant breaches:
+
+| | Rate |
+|---|---|
+| Optimistic | 6.00% |
+| Base | 4.28% |
+| **Stress (binding)** | **3.77%** |
+| Investor break-even by median survival (age 87) | **4.58%** |
+
+**No rate clears every scenario and repays the investor — the gap is 81bp.** An
+earlier note in this log said 30bp; that was computed on Base alone and was
+wrong. Stress binds, and all three should have been checked before quoting a
+ceiling.
+
+4.25% is adopted as a deliberate judgement: Base and Optimistic stay clean,
+Stress breaches in 10 of 50 years, on the view that a *severe* stress (15%
+voids, CPI 4.5%, housing crash, halved take-up, no gifts ever) may breach a
+self-imposed covenant. If the covenant must hold in all worlds, the rate falls
+to 3.75% and the investor recovers ~82%. **This is the reviewer's decision, not
+the model's**, and it is stated as such on the workbook's "For Review" sheet.
+
+### Findings from the same session, none yet built
+
+**Evergreen vs closed is a mission question, not a financing one.** With
+portfolio-wide charging the free share of the portfolio is pinned at ~30%
+forever — old debt runs off, headroom reappears, and it is re-lent against the
+same houses. A closed 10-year raise reaches 100% unencumbered by year 43.
+
+**Ring-fenced tranches beat both.** If each tranche's charge sits only on the
+houses that tranche bought, total debt stabilises while the portfolio grows, so
+the free share climbs indefinitely — 70% by year 40, 92% by year 100, with
+specific houses fully free from year 42. The tranche interval (5 or 10 years)
+barely matters; the ring-fencing is the whole effect. **Not implemented:** the
+LTV test would become per-tranche, plus a release-ordering layer.
+
+**Property attribution, solved.** Pool survivorship across all tranches — a
+single £5m tranche sees ~88% year-to-year volatility in deaths, pooled across
+eight it falls to ~31% — but attribute property release oldest-tranche-first.
+Pooling changes only the *variance* of run-off, never its expectation, so the
+release schedule is unaffected and no tranche is penalised for its own luck.
+Liability-side pooling and asset-side attribution are separate decisions.
+
+**Borrowing against freed assets is a non-question.** Nothing is fully
+unencumbered until year 42, so the acceleration it would buy is unavailable in
+the years growth is actually constrained. The ethical position costs nothing.
+
+**The Tontine is the cheapest capital, at every plausible price.** PV of what
+SLC gives up per £100 raised, at a 3.25% real discount rate: Tontine 65,
+community shares 82 (held) to 99 (repaid over 25y), RCO 114. It stays cheapest
+up to 5.38%, above the whole range in play — because the principal is never
+repaid and the obligation dies with the investor. Cheapness is bought with the
+charge: shares and RCOs cost more precisely because they take no security.
+
+**But they are segments, not substitutes.** Tontine suits pensioners, shares
+suit believers, RCOs suit investors wanting inflation-indexed, asset-denominated
+compounding. They draw on three different resources — property value, balance
+sheet size, goodwill — and each hits a different limit. On Base the actual mix
+is 57% shares, 27% gifts, **16% Tontine**: the instrument this project has spent
+most effort on supplies the least capital.
+
+**The community share cap binds in 17 of 50 years** at 20% of total capital,
+while the Tontine uses only 13% of its own cap. The most enthusiastic segment is
+being turned away by a structural limit. Given director discretion over
+withdrawals, that cap is the cheapest available unlock and should be tested.
+
+### The Pollen Community Wealth Fund proposal
+
+A member's fund-side proposal, reviewed. It is the investor vehicle rather than
+a competing SLC model, so most of it sits above this one. Three findings:
+
+- Its headline mortality figure ("19% male / 15% female at 75") is decade-
+  *cumulative* mortality from 65 to 75, used as if it were an annual rate. The
+  annual rate at 75 is 2.5%; 19% is reached around age 95. The 12.5% payout it
+  justifies is nonetheless roughly defensible — it needs a 2.43% real return —
+  so the reasoning needs replacing, not the number.
+- Its payout is **not fundable from an SLC charge as designed**: £155 out per
+  £100 in against £71 the charge generates, and the charge is never repaid so
+  cannot be realised to cover the gap. SLC can only ever be a minority of such
+  a fund's assets.
+- Its higher promise raises technical provisions ~2.5x, so the £50m NDF
+  threshold arrives at £45m raised rather than £113m — halving the runway before
+  full insurance regulation.
+
+---
+
 ## Planned — not yet started
 
 Recorded 2026-08-07 from the design discussion, so the sequence is not lost.

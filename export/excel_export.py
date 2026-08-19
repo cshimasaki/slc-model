@@ -519,6 +519,95 @@ def _comparison(wb: Workbook, results: dict[str, ModelRun]) -> None:
     ws.sheet_view.showGridLines = False
 
 
+def _for_review(wb: Workbook, results: dict[str, ModelRun]) -> None:
+    """
+    A sheet written for the reviewer, not for the model.
+
+    An advisor opening a 50-year projection needs to know two things before the
+    numbers mean anything: what has been assumed that is not yet evidenced, and
+    which decisions are still open. Burying those in a code repository and
+    handing over only the outputs would be presenting the model as more settled
+    than it is.
+    """
+    from engine.tontine_runoff import load_curve
+
+    ws = wb.create_sheet("For Review", 1)
+    a = results["base"].assumptions
+    curve = load_curve()
+    life = sum(curve.survival_at(t) for t in range(61))
+
+    row = _title(ws, "For the reviewer — open questions and known limits",
+                 "Read before the figures. Everything here is a judgement the model "
+                 "cannot make for itself.", 3)
+
+    def block(heading, lines):
+        nonlocal row
+        ws.cell(row=row, column=1, value=heading).font = Font(name=FONT, bold=True, size=11)
+        for c in range(1, 4):
+            ws.cell(row=row, column=c).fill = PatternFill("solid", fgColor=BAND)
+        row += 1
+        for label, value in lines:
+            ws.cell(row=row, column=1, value=label).font = Font(name=FONT)
+            ws.cell(row=row, column=1).alignment = Alignment(wrap_text=True, vertical="top")
+            c = ws.cell(row=row, column=2, value=value)
+            c.font = Font(name=FONT, bold=True)
+            c.alignment = Alignment(horizontal="left")
+            row += 1
+        row += 1
+
+    inv = a.pf_investor_rate
+    recovered = sum(inv * 100 * curve.survival_at(t) for t in range(61))
+
+    block("1. THE PRICING FRONTIER — the most important open question", [
+        ("Highest coupon with no covenant breach: Optimistic", f"{6.00:.2f}%"),
+        ("Highest coupon with no covenant breach: Base", f"{4.28:.2f}%"),
+        ("Highest coupon with no covenant breach: Stress (binding)", f"{3.77:.2f}%"),
+        ("Coupon an investor needs to break even by median survival (age 87)", f"{4.58:.2f}%"),
+        ("Currently modelled", f"{inv * 100:.2f}%"),
+        ("Capital the investor recovers over their expected life", f"{recovered:.0f}%"),
+        ("Consequence at the modelled rate", "Stress breaches in 10 of 50 years"),
+        ("The question for you", "Is a self-imposed covenant allowed to breach in a severe stress?"),
+    ])
+
+    block("2. WHAT THE INSTRUMENT ACTUALLY IS", [
+        ("Principal repaid to the investor", "Never — the charge is extinguished on death"),
+        ("So the investor's entire return is", "the coupon, while they live"),
+        ("Which means the investor", "does not recover their capital in full"),
+        ("And the Commons receives", "the shortfall, as a permanently unencumbered home"),
+        ("These are the same transaction", "viewed from opposite sides"),
+    ])
+
+    block("3. THE MORTALITY BASIS IS A PLACEHOLDER", [
+        ("Source", "ONS population mortality, Gompertz-Makeham fit"),
+        ("Improvements applied", "CMI-style, 1.25% p.a."),
+        ("Cohort life expectancy at 65 used here", f"{life:.1f} years"),
+        ("NOT an annuitant basis", "annuitants self-select and live longer"),
+        ("Therefore these figures", "UNDERSTATE longevity cost — a favourable bound"),
+        ("Real dataset expected", "Department of Actuarial Mathematics, September 2026"),
+    ])
+
+    block("4. DECISIONS STILL OPEN", [
+        ("What happens to a dead investor's capital",
+         "100% to the Commons is assumed; a split with survivors is undecided"),
+        ("Cost of conceding it entirely to investors", "roughly £42m of net assets by Year 50"),
+        ("Tranche structure", "single 10-year raise modelled; rolling ring-fenced tranches not yet built"),
+        ("Community share cap", f"{a.cs_max_pct_capital:.0%} of capital — binds in 17 of 50 years"),
+        ("Rent Credit Obligations", "deliberately out of scope — separate vehicle, different economics"),
+    ])
+
+    block("5. WHAT THE MODEL CANNOT TELL YOU", [
+        ("Gift and bequest income", "an input, not a forecast — the model cannot bound it"),
+        ("Investor appetite at any price", "behavioural, not modelled"),
+        ("Where efficiency savings go", "assumed retained; intent is to share or spend on retrofit"),
+        ("Withdrawal clustering", "modelled as a smooth rate; reality clusters"),
+        ("Credit, default and arrears", "not modelled at all"),
+    ])
+
+    ws.column_dimensions["A"].width = 62
+    ws.column_dimensions["B"].width = 58
+    ws.sheet_view.showGridLines = False
+
+
 # ---------------------------------------------------------------- entry ----
 
 def write_workbook(path: str, scenario: str = "base",
@@ -531,6 +620,7 @@ def write_workbook(path: str, scenario: str = "base",
     wb.remove(wb.active)
 
     _dashboard(wb, result)
+    _for_review(wb, results)
     _comparison(wb, results)
     _financial_statements(wb, result)
     _monthly(wb, result)

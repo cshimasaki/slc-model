@@ -31,13 +31,34 @@ tontine_fund:
   # pf_release_start_yr a slice of the balance is released to SLC reserves each
   # year as a non-cash credit (a parametric proxy for annuitant survivorship).
   pf_index_label: CPI            # Indexation basis for principal and coupon
-  # Set to CPI + 2.5% to match the indicative actuarial model (Aug 2026).
-  # With the fund's operating margin and regulatory charge unchanged, this
-  # gives an implied SLC coupon of CPI + 3.25% -- exactly the charge coupon
-  # that model prices. The actuarial work also found the fund collateralised
-  # at 2.13x its liabilities, i.e. the instrument can support a lower coupon
-  # than it was originally given.
-  pf_investor_rate: 0.025        # Target investor annuity rate, spread over index (% p.a.)
+  # CPI + 4.25%. Raised from 2.5% in August 2026 after modelling what the
+  # investor actually receives.
+  #
+  # The principal is never repaid, so the coupon IS the entire return. At 2.5%
+  # an investor recovers about 55% of their capital over their expected life
+  # and does not break even until age 104 -- i.e. never. That is philanthropy
+  # with a yield, not the "small bet on longevity" the design intends, and it
+  # will not raise money from anyone comparing it with an annuity.
+  #
+  # The frontier, on current assumptions. Ceiling = highest rate with ZERO
+  # covenant breaches in that scenario:
+  #     Optimistic  6.00%
+  #     Base        4.28%
+  #     Stress      3.77%   <- the binding one
+  #     Investor    4.58%   needed to break even by median survival (age 87)
+  #
+  # There is no rate that clears every scenario AND pays the investor back:
+  # the gap is 81bp. 4.25% is set here as a deliberate choice -- Base and
+  # Optimistic stay covenant-clean, Stress breaches in 10 of 50 years. That is
+  # a judgement that a severe stress (15% voids, CPI 4.5%, a housing crash,
+  # halved take-up, no gifts ever) is allowed to breach a self-imposed
+  # covenant. If the covenant is meant to hold in all worlds, the rate must
+  # fall to 3.75% and the investor recovers only ~82% of capital.
+  #
+  # Closing the gap properly needs the levers on SLC's side -- gift income,
+  # scale efficiency, a lower LTV -- not a higher coupon. This is the single
+  # most important open question in the model. See MODEL_LOG.
+  pf_investor_rate: 0.0425       # Target investor annuity rate, spread over index (% p.a.)
 
   # How the coupon rate is applied to the (already CPI-uplifted) principal.
   #   real     coupon = spread only. The investor's inflation protection
