@@ -12,21 +12,28 @@ this year by year, and to compare scenarios.
 
 ## The short version
 
-The model moved out of Excel into code, and in the process **six substantive
+The model moved out of Excel into code, and in the process **seven substantive
 things about the Tontine turned out to be wrong or missing**. One of them — the
 coupon — was making the entire plan look precarious when it isn't.
 
 | | As inherited from V2.1 | Now |
 |---|---|---|
-| Base: houses at Year 50 | 49 | **117** |
-| Base: net assets at Year 50 | £62m | **£172m** |
+| Base: houses at Year 50 | 49 | **106** |
+| Base: net assets at Year 50 | £62m | **£154m** |
 | Base: years breaching covenant | 21 | **0** |
-| Stress: years breaching covenant | 34 | **0** |
-| Stress: net assets at Year 50 | £60m | **£170m** |
+| Stress: years breaching covenant | 34 | **10** |
+| Stress: net assets at Year 50 | £60m | **£141m** |
 
-**Every scenario now clears its covenant in every year**, including Stress.
-That was not true of any parameter combination we tried before the errors were
-found — it is the result of correcting them, not of optimistic assumptions.
+Base and Optimistic clear their covenant in **every** year. Stress breaches in
+10 of 50 — a deliberate choice, not an oversight: the investor coupon was set
+at a level Stress cannot quite carry, because setting it low enough for Stress
+would leave investors recovering only ~82% of their capital. **That trade-off
+is the single most important open question in the model**, and it is stated on
+the first sheet of the workbook rather than buried here.
+
+The improvement over V2.1 is the result of correcting errors, not of adopting
+more optimistic assumptions. The assumptions are, if anything, more
+conservative than they were.
 
 ---
 
@@ -53,8 +60,10 @@ that already-indexed principal. The investor received CPI twice.
 At Base inflation this overstated SLC's interest cost by **95%**. Fifty-year
 interest falls from £12.8m to £6.8m once corrected.
 
-This single fix took Base from breaching its covenant in 10 years to **none**,
-and Stress from 27 years to **none**.
+Measured on its own, at the 2.5% coupon in force at the time, this single fix
+took Base from breaching its covenant in 10 years to **none**, and Stress from
+27 years to **none**. Raising the coupon to 4.25% afterwards spent some of that
+headroom deliberately — see change 6.
 
 ### 2. The Tontine was modelled as a repayment schedule, not as mortality
 
@@ -137,12 +146,34 @@ and note this assumes the saving *stays* with the Commons. If it is passed to
 tenants as lower rent or consumed by retrofitting, as intended, the benefit to
 the balance sheet is smaller or nil.
 
-### 6. Smaller corrections
+### 6. The investor rate, and the question it exposes
 
-- **Investor annuity rate** moved from CPI + 3.0% to **CPI + 2.5%**, matching
-  the indicative actuarial model. The actuarial work found the fund
-  collateralised at 2.13× its liabilities, i.e. it can carry a lower coupon
-  than it was originally given.
+Moved from CPI + 3.0% → 2.5% → **CPI + 4.25%**. The middle step matched the
+indicative actuarial model; the final one came from asking what the investor
+actually receives.
+
+**The principal is never repaid, so the coupon is the entire return.** At 2.5%
+an investor recovers about **55% of their capital** over their expected life and
+does not break even until **age 104** — that is, never. That is philanthropy
+with a yield, not a bet on longevity, and it would not raise money from anyone
+comparing it with an annuity.
+
+Raising it to 4.25% lifts recovery to ~93%. But the ceilings do not line up:
+
+| | Rate |
+|---|---|
+| Highest coupon Optimistic can carry with no breach | 6.00% |
+| Highest coupon Base can carry | 4.28% |
+| **Highest coupon Stress can carry** | **3.77%** |
+| **Coupon the investor needs to break even by age 87** | **4.58%** |
+
+**No rate satisfies both — the gap is 81 basis points.** 4.25% is a judgement
+that a severe stress may breach a self-imposed covenant. Closing the gap
+properly means improving SLC's side — gift income, scale efficiency, a lower
+LTV — not raising the coupon further.
+
+### 7. Smaller corrections
+
 - **Community share withdrawal restriction** corrected from 5 years to **2**,
   matching the actual offer terms.
 
@@ -150,21 +181,34 @@ the balance sheet is smaller or nil.
 
 ## What the model now says
 
-On Base assumptions, with the conservative gift profile:
+| | Houses at Y50 | Net assets | Covenant breaches | Rent alone covers interest from |
+|---|---|---|---|---|
+| **Base** | 106 | £154m | none | Year 14 |
+| **Optimistic** | 236 | £471m | none | Year 5 |
+| **Stress** | 48 | £141m | 10 of 50 | Year 27 |
 
-- **117 properties** by Year 50, worth **£172m** in net assets
-- **No covenant breach in any year**
-- The portfolio pays its own interest from rent alone from **Year 6**
-- Total Tontine capital drawn: under **£8m** of the £50m available
+Stress is deliberately harsh: high inflation, 15% voids, a 20% house-price
+crash in Year 5, halved share take-up, and no property gift ever arriving. It
+still ends with 48 homes and £141m of net assets, but it does not carry the
+coupon comfortably.
 
-Stress — high inflation, 15% voids, a 20% house-price crash in Year 5, halved
-share take-up, and no property gifts ever — still clears the covenant in every
-year and ends at £170m net assets.
+**Where the money comes from may be the most surprising figure here.** On Base,
+across fifty years:
 
-**A caveat worth stating plainly:** this is not because the plan became more
-ambitious. It is because the arithmetic was wrong in ways that made it look
-worse than it is. The assumptions are, if anything, more conservative than they
-were.
+| Source | Raised | Share of external capital |
+|---|---|---|
+| Community shares | £22.4m | **56%** |
+| Gifts and bequests | £10.9m | 27% |
+| **Tontine** | £6.8m | **17%** |
+
+Plus £66.7m of retained surplus, generated internally rather than raised.
+
+The Tontine — the instrument that has absorbed most of the design effort —
+supplies about one pound in six. It draws only what acquisitions need *after*
+gifts and share issuance, so its size reflects its position in the funding
+queue rather than any limit on its capacity: it uses just 13% of its own £50m
+cap. Community shares, meanwhile, hit their 20%-of-capital ceiling in 17 of 50
+years — the most enthusiastic segment being turned away by a structural limit.
 
 ---
 
@@ -177,9 +221,9 @@ lifting their yield without reducing what SLC owes.
 
 | To the Commons | To investors | Net assets at Year 50 |
 |---|---|---|
-| 100% | 0% | **£172m** |
-| 50% | 50% | £152m |
-| 0% | 100% | £130m |
+| 100% | 0% | **£154m** |
+| 50% | 50% | £125m |
+| 0% | 100% | £97m |
 
 Conceding the whole survivorship benefit to investors costs roughly **£42m** of
 net assets — around £10m for every 25 points. It is a commercial judgement —
