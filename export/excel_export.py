@@ -25,6 +25,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
+from engine import pricing
 from engine.model import ModelRun, run_all
 from engine.state import SHEET_MAP
 
@@ -442,6 +443,58 @@ def _capital(wb: Workbook, result: ModelRun) -> None:
     _finish(ws, n, header_row)
 
 
+SCENARIO_ORDER = ["base", "optimistic", "stress"]
+
+
+def _stock_rows(ws, row: int, p: dict) -> int:
+    """
+    The acquisition mix, one property type per row, per scenario column.
+
+    Shows the share of acquisitions each type takes, and beneath the label the
+    price and rent that produce its yield -- because the yield is the whole
+    reason this section exists, and a reader who cannot see where it came from
+    will assume it was chosen rather than derived.
+    """
+    ws.cell(row=row, column=1, value=p["label"]).font = Font(name=FONT, italic=True)
+    ws.cell(row=row, column=1).alignment = Alignment(indent=1)
+    ws.cell(row=row, column=2, value="share of purchases").font = Font(
+        name=FONT, size=9, color=MUTED
+    )
+
+    # Union of the types across scenarios, in the order Base lists them, so a
+    # type that only Optimistic buys still gets a row rather than vanishing.
+    names: list[str] = []
+    for scenario in SCENARIO_ORDER:
+        for t in p["values"][scenario]:
+            if t["name"] not in names:
+                names.append(t["name"])
+
+    for k, name in enumerate(names, start=1):
+        r = row + k
+        detail = next(
+            (t for s in SCENARIO_ORDER for t in p["values"][s] if t["name"] == name), None
+        )
+        ws.cell(row=r, column=1, value=name).font = Font(name=FONT)
+        ws.cell(row=r, column=1).alignment = Alignment(indent=2)
+        if detail:
+            yld = detail["rent_pcm"] * 12 / detail["price"]
+            ws.cell(
+                row=r, column=2,
+                value=f"£{detail['price']:,.0f} · £{detail['rent_pcm']:,.0f} pcm · {yld:.2%}",
+            ).font = Font(name=FONT, size=9, color=MUTED)
+
+        for j, scenario in enumerate(SCENARIO_ORDER):
+            share = next(
+                (t["share"] for t in p["values"][scenario] if t["name"] == name), None
+            )
+            # A blank, not a zero: this scenario does not buy that type at all,
+            # which is a different statement from buying none of it this year.
+            c = ws.cell(row=r, column=3 + j, value=share if share is not None else "—")
+            c.font = Font(name=FONT, color=INPUT_BLUE if share is not None else MUTED)
+            c.number_format = "0%" if share is not None else "General"
+    return row + len(names) + 1
+
+
 def _assumptions_sheet(wb: Workbook, results: dict[str, ModelRun]) -> None:
     """All three scenarios' inputs side by side, as the workbook's own sheet did."""
     from .json_bundle import build_assumptions_block
@@ -463,6 +516,16 @@ def _assumptions_sheet(wb: Workbook, results: dict[str, ModelRun]) -> None:
             ws.cell(row=row, column=col).fill = PatternFill("solid", fgColor=BAND)
         row += 1
         for p in section["params"]:
+            # The stock mix is a table, not a number: each scenario holds a list
+            # of property types with their own price and rent. Writing the list
+            # into a cell is not possible and flattening it to a string would
+            # bury the most consequential decision in the model in a wall of
+            # punctuation. It gets its own rows instead.
+            if isinstance(p["values"]["base"], list):
+                _stock_rows(ws, row, p)
+                row += 1 + max(len(p["values"][s]) for s in SCENARIO_ORDER)
+                continue
+
             ws.cell(row=row, column=1, value=p["label"]).font = Font(name=FONT)
             ws.cell(row=row, column=1).alignment = Alignment(indent=1)
             ws.cell(row=row, column=2, value=p["unit"]).font = Font(name=FONT, size=9, color=MUTED)
@@ -558,14 +621,33 @@ def _for_review(wb: Workbook, results: dict[str, ModelRun]) -> None:
     inv = a.pf_investor_rate
     recovered = sum(inv * 100 * curve.survival_at(t) for t in range(61))
 
+    # Computed, not remembered. These four numbers were hardcoded and had gone
+    # stale by roughly 150bp: every structural change since moves them, and this
+    # sheet is the one an external reviewer reads first.
+    front = pricing.frontier()
+    gap_bp = pricing.gap(front)
+
+    def pct(v):
+        return f"{v * 100:.2f}%" if v is not None else "no rate clears"
+
+    breaches = sum(
+        1 for v in result.state.capital.cash_interest_cover
+        if isinstance(v, (int, float)) and v < a.cov_cash_cover_min
+    )
+
     block("1. THE PRICING FRONTIER — the most important open question", [
-        ("Highest coupon with no covenant breach: Optimistic", f"{6.00:.2f}%"),
-        ("Highest coupon with no covenant breach: Base", f"{4.28:.2f}%"),
-        ("Highest coupon with no covenant breach: Stress (binding)", f"{3.77:.2f}%"),
-        ("Coupon an investor needs to break even by median survival (age 87)", f"{4.58:.2f}%"),
+        ("Highest coupon with no covenant breach: Optimistic", pct(front["optimistic"])),
+        ("Highest coupon with no covenant breach: Base", pct(front["base"])),
+        ("Highest coupon with no covenant breach: Stress (binding)", pct(front["stress"])),
+        ("Coupon an investor needs to break even by median survival (age 87)",
+         pct(front["investor_break_even"])),
+        ("Gap between what Stress bears and what an investor needs",
+         "n/a" if gap_bp is None else f"{gap_bp:+.0f} bp"),
         ("Currently modelled", f"{inv * 100:.2f}%"),
         ("Capital the investor recovers over their expected life", f"{recovered:.0f}%"),
-        ("Consequence at the modelled rate", "Stress breaches in 10 of 50 years"),
+        ("Consequence at the modelled rate",
+         f"this scenario breaches in {breaches} of {result.n_years} years"
+         if breaches else "no covenant breach in this scenario"),
         ("The question for you", "Is a self-imposed covenant allowed to breach in a severe stress?"),
     ])
 

@@ -425,7 +425,6 @@ def test_release_never_fully_discharges_while_liability_remains():
     left.
     """
     from engine.assumptions import load
-    from engine.capital_debt import _fund_year
     from engine.tontine_runoff import load_curve
 
     a = load("base")

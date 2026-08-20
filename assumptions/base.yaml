@@ -63,24 +63,19 @@ tontine_fund:
   # with a yield, not the "small bet on longevity" the design intends, and it
   # will not raise money from anyone comparing it with an annuity.
   #
-  # The frontier, on current assumptions. Ceiling = highest rate with ZERO
-  # covenant breaches in that scenario:
-  #     Optimistic  6.00%
-  #     Base        4.28%
-  #     Stress      3.77%   <- the binding one
-  #     Investor    4.58%   needed to break even by median survival (age 87)
+
+  # The frontier is no longer written down here. It moved roughly 150bp across
+  # the changes of August 2026 -- the coupon basis fix, maintenance corrected to
+  # two months of rent, ONS macro figures, rent indexation, the stock mix -- and
+  # a number typed into a comment goes stale silently. engine/pricing.py
+  # computes it, and the reviewer sheet in the Excel export prints whatever it
+  # currently is.
   #
-  # There is no rate that clears every scenario AND pays the investor back:
-  # the gap is 81bp. 4.25% is set here as a deliberate choice -- Base and
-  # Optimistic stay covenant-clean, Stress breaches in 10 of 50 years. That is
-  # a judgement that a severe stress (15% voids, CPI 4.5%, a housing crash,
-  # halved take-up, no gifts ever) is allowed to breach a self-imposed
-  # covenant. If the covenant is meant to hold in all worlds, the rate must
-  # fall to 3.75% and the investor recovers only ~82% of capital.
-  #
-  # Closing the gap properly needs the levers on SLC's side -- gift income,
-  # scale efficiency, a lower LTV -- not a higher coupon. This is the single
-  # most important open question in the model. See MODEL_LOG.
+  # What does not change is the shape of the question: there may be no rate that
+  # both clears Stress and pays the investor back by median survival (age 87,
+  # needing about 4.58%). Where a gap exists, closing it needs the levers on
+  # SLC's side -- what we buy, gift income, scale efficiency, a lower LTV -- not
+  # a higher coupon. See MODEL_LOG.
   pf_investor_rate: 0.0425       # Target investor annuity rate, spread over index (% p.a.)
 
   # How the coupon rate is applied to the (already CPI-uplifted) principal.

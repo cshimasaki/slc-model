@@ -691,6 +691,76 @@ surfaced because the new mix grows Optimistic fast enough to reach its ceiling.
 
 ---
 
+## Second wave, August 2026 — real costs, real stock, and what the covenant is for
+
+**Branch:** `structure/real-costs-and-indexation` · **Date:** 2026-08-20 · **Decision:** adopt the mechanics, hold the parameters open
+
+Six changes, each replacing something the model had asserted with something it
+can now show. Grouped here because they interact and the order matters.
+
+**Costs became what they are, not what a percentage said.** The fund's 0.50%
+operating margin became a staffed cost -- part-time and pro-rata, ramping with
+cumulative raise -- and moved out of the coupon into opex, where it reduces the
+surplus visibly. A time-based ramp was tried first and was obviously wrong on the
+first run: under Stress it put a full salary on a fund that never grew, at 47% of
+all rental income for fifteen houses. Separately, `lc_share` (flat 80%) became
+two months of rent falling with scale, and `admin_per_prop` / `maint_per_prop`
+went to zero because that same 16.67% already covered them -- roughly GBP 850 per
+house per year of phantom cost.
+
+**Indexation became a choice.** `pf_index_basis: rent | cpi | hpi`, defaulting to
+rent. Under Stress at 70% LTV: rent gives 9 breaches and rent-only cover 0.89,
+CPI 9 and 0.79, HPI 13 and 0.72. The hypothesis that a CPI/rent divergence was
+the dominant failure mode was WRONG -- correcting the basis moved breaches from
+13 to 11, not to zero. The real cause was marginal cover on a debt-funded house,
+which is a ratio, not an indexation artefact.
+
+**Community shares became what CCBSA 2014 says they are.** An advertised rate is
+a ceiling paid at board discretion, not a promise. Cover splits into senior (can
+rent pay the annuity?) and all-in (can it also pay the share offer?), and share
+interest is subordinated to the reserve as well as to the annuity. At 40% of
+funding need and a 5% advertised rate, Stress holds senior cover at 1.46 with
+zero breaches while the offer under-delivers in 15 of 50 years. Shareholders
+wait; annuitants do not. An intermediate version treated share interest as a hard
+charge and concluded Stress failed -- that was wrong about the instrument.
+
+**Stock became a decision.** The single average house hid the largest lever in
+the model. Same finances, three acquisition policies, Base: all 2-bed flats gives
+203 houses and senior cover 3.65; all 3-bed terraces 188 and 2.22; all 3-bed
+semis 160 and 1.90. A 3-bed terrace and a 3-bed semi let for the same GBP 1,176
+and the semi costs GBP 55,000 more. That spread is wider than moving LTV from 70%
+to 30%.
+
+**Macro moved to published figures.** CPI 2.9%, rent 3.7%, house prices 2.0% (ONS,
+mid-2026). The workbook had rent = CPI and houses = CPI + 1%; the second is wrong
+in sign. Stress deliberately keeps the old relationship, because that gap is its
+mechanism.
+
+**Two errors worth recording so they are not repeated.** Dividing Stroud average
+rent by Stroud average house price gives 3.57% and suggests the model is
+unfinanceable -- but those are different populations, and the sale average
+includes GBP 563,000 detached houses that never reach the rental market. Matched
+by stock type the yield is 4.0-4.9%, so the original 5.0% was close to right.
+And the "rent discount is affordable" finding is real but is a transfer, not free
+money: a 25% discount passes every covenant, and is paid for by 40 fewer houses
+by year 50 and share delivery falling from 96% to 71%.
+
+**Where the parameters stand.** Deliberately NOT updated to the configuration the
+exploration arrived at. base.yaml still carries a 4.25% coupon, 70% LTV, a 3%
+share rate and shares at 15% of need, and on those settings Stress breaches in 3
+of 50 years with rent-only cover at 0.99. The exploration points at roughly 4.75%
+/ 45% LTV / 5% shares at 45% of need, which clears everything -- but those are
+board decisions with real consequences for tenants and investors, and setting
+them quietly in a commit is not the same as choosing them.
+
+**Housekeeping.** The pricing frontier is computed by `engine/pricing.py` rather
+than typed into a comment and the reviewer sheet; the hardcoded version had gone
+stale by about 150bp. The balance-sheet invariant now scales with the balance
+sheet, since a flat cash tolerance refused to run above roughly GBP 500m. Dead
+`_fund_year` removed.
+
+---
+
 ## Planned — not yet started
 
 Recorded 2026-08-07 from the design discussion, so the sequence is not lost.

@@ -12,16 +12,21 @@ The Tontine is a closed-end lifetime annuity mutual, and behaves unlike a
 normal loan in three ways:
 
   * It is *interest-only and index-linked*. The principal is never amortised;
-    instead it is uplifted by CPI every year (row 31). That uplift is a real
-    charge to the P&L but never touches cash.
+    instead it is uplifted every year (row 31) on whatever basis
+    `pf_index_basis` selects -- rent by default, since the charge is secured on
+    houses that are never sold and rent is the only cash they produce. That
+    uplift is a real charge to the P&L but never touches cash.
   * Drawdowns are capped three ways at once (row 37): by what the acquisitions
     actually need, by LTV headroom, and by what remains of the maximum raise --
-    and only during the investment phase.
-  * From `pf_release_start_yr` a slice of the balance is *released* each year
-    (row 41): written off the liability and credited to SLC's reserves. This is
-    the tontine mechanic proper -- as annuitants' claims lapse, value transfers
-    to the surviving mutual. The model does this parametrically, at a flat rate
-    on the pooled balance, with no mortality table or per-investor tracking.
+    and only during the investment phase. In practice the FIRST of those binds
+    in almost every year: the fund draws what the houses need, so its size
+    reflects its place in the funding queue rather than any limit on appetite.
+  * The charge is *extinguished by death*, not by a schedule. Each drawdown is
+    a cohort of investors who entered at 65; while they live SLC pays the
+    coupon, and as they die both the coupon and the charge go with them, with
+    no principal ever repaid. `pf_release_mode: survivorship` is that
+    behaviour. The workbook's flat percentage release survives as "geometric"
+    only so the model can still reproduce the spreadsheet.
 """
 
 from __future__ import annotations
@@ -40,20 +45,6 @@ from .state import ModelState
 # is gone, saying so at import is the useful behaviour.
 runoff_curve = tontine_runoff.load_curve()
 
-
-def _fund_year(c, i: int) -> int:
-    """
-    Years since the Tontine first drew capital.
-
-    The actuarial curve is indexed from the fund's own first drawdown, which is
-    not the model year: the fund may not draw in year 1, and in scenarios where
-    it never draws there is no fund year at all. Returns -1 in that case, which
-    the curve reads as zero liability.
-    """
-    for k, drawn in enumerate(c.tf_drawdown):
-        if drawn > 0:
-            return i - k
-    return -1
 
 
 # ---------------------------------------------------------------- gifts ----
