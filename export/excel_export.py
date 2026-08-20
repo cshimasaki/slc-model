@@ -66,6 +66,20 @@ thin = Side(style="thin", color=RULE)
 medium = Side(style="medium", color=INK)
 
 
+def _sheet_name(base: str, prefix: str = "") -> str:
+    """
+    A sheet name, optionally tagged with its scenario.
+
+    Excel caps sheet names at 31 characters and silently mangles longer ones, so
+    the longest combination this can produce -- "Optimistic - Monthly Cash Flow"
+    at 30 -- is what the abbreviations are sized against.
+    """
+    name = base if not prefix else f"{prefix} - {base}"
+    if len(name) > 31:
+        raise ValueError(f"sheet name too long for Excel ({len(name)}): {name!r}")
+    return name
+
+
 def _title(ws, text: str, subtitle: str, width: int) -> int:
     """Write the two-line header every sheet carries. Returns the next row."""
     ws["A1"] = text
@@ -139,11 +153,11 @@ def _finish(ws, n_years: int, header_row: int, first_col: int = 3) -> None:
 
 # --------------------------------------------------------------- sheets ----
 
-def _dashboard(wb: Workbook, result: ModelRun) -> None:
+def _dashboard(wb: Workbook, result: ModelRun, prefix: str = "") -> None:
     from .json_bundle import DSCR_COVENANT
     from .series import HEADLINES
 
-    ws = wb.create_sheet("Dashboard")
+    ws = wb.create_sheet(_sheet_name("Dashboard", prefix))
     state = result.state
     row = _title(ws, "Stroud Land Commons — Dashboard",
                  f"Scenario: {result.scenario.title()} · {result.n_years}-year projection · "
@@ -197,8 +211,8 @@ def _dashboard(wb: Workbook, result: ModelRun) -> None:
     ws.sheet_view.showGridLines = False
 
 
-def _financial_statements(wb: Workbook, result: ModelRun) -> None:
-    ws = wb.create_sheet("Financial Statements")
+def _financial_statements(wb: Workbook, result: ModelRun, prefix: str = "") -> None:
+    ws = wb.create_sheet(_sheet_name("Financial Stmts", prefix))
     f = result.state.statements
     n = result.n_years
     cal = result.macro.calendar_year
@@ -272,8 +286,8 @@ def _financial_statements(wb: Workbook, result: ModelRun) -> None:
     _finish(ws, n, header_row)
 
 
-def _monthly(wb: Workbook, result: ModelRun) -> None:
-    ws = wb.create_sheet("Monthly Cash Flow")
+def _monthly(wb: Workbook, result: ModelRun, prefix: str = "") -> None:
+    ws = wb.create_sheet(_sheet_name("Monthly Cash Flow", prefix))
     mo = result.state.monthly
     n = len(mo.month)
 
@@ -336,8 +350,8 @@ def _monthly(wb: Workbook, result: ModelRun) -> None:
     _finish(ws, n, header_row)
 
 
-def _asset_register(wb: Workbook, result: ModelRun) -> None:
-    ws = wb.create_sheet("Asset Register")
+def _asset_register(wb: Workbook, result: ModelRun, prefix: str = "") -> None:
+    ws = wb.create_sheet(_sheet_name("Asset Register", prefix))
     A = result.state.assets
     g = result.state.growth
     n = result.n_years
@@ -384,8 +398,8 @@ def _asset_register(wb: Workbook, result: ModelRun) -> None:
     _finish(ws, n, header_row)
 
 
-def _capital(wb: Workbook, result: ModelRun) -> None:
-    ws = wb.create_sheet("Capital & Debt")
+def _capital(wb: Workbook, result: ModelRun, prefix: str = "") -> None:
+    ws = wb.create_sheet(_sheet_name("Capital & Debt", prefix))
     c = result.state.capital
     n = result.n_years
     cal = result.macro.calendar_year
@@ -607,7 +621,7 @@ GRID_IN = "E4E3E0"
 CHART_DATA = "Chart data"
 
 
-def _chart_data_sheet(wb: Workbook, result: ModelRun) -> None:
+def _chart_data_sheet(wb: Workbook, result: ModelRun, prefix: str = "") -> None:
     """
     The series the charts plot, in cells, because an Excel chart must point at
     cells rather than at numbers held in Python.
@@ -617,7 +631,7 @@ def _chart_data_sheet(wb: Workbook, result: ModelRun) -> None:
     pointing the charts at the statement sheets instead would tie them to row
     positions that move whenever a line item is added.
     """
-    ws = wb.create_sheet(CHART_DATA)
+    ws = wb.create_sheet(_sheet_name(CHART_DATA, prefix))
     s, c = result.state, result.state.capital
     n = result.n_years
 
@@ -674,7 +688,7 @@ def _style_axes(chart, y_title: str, x_title: str = "Model year") -> None:
     chart.y_axis.delete = False
 
 
-def _add_charts(wb: Workbook, result: ModelRun) -> None:
+def _add_charts(wb: Workbook, result: ModelRun, prefix: str = "") -> None:
     """
     Four charts on the Dashboard, each answering one question.
 
@@ -685,15 +699,16 @@ def _add_charts(wb: Workbook, result: ModelRun) -> None:
     in two forms, and there is no second y-axis anywhere -- two measures on one
     frame with different scales is the commonest way to make a chart lie.
     """
-    ws = wb["Dashboard"]
+    ws = wb[_sheet_name("Dashboard", prefix)]
     n = result.n_years
     last = 1 + n
-    years = Reference(wb[CHART_DATA], min_col=1, min_row=2, max_row=last)
+    data = wb[_sheet_name(CHART_DATA, prefix)]
+    years = Reference(data, min_col=1, min_row=2, max_row=last)
 
     # 1. Portfolio over time. One series, so no legend -- the title names it.
     ch = LineChart()
     ch.title = "Properties in the Commons"
-    ch.add_data(Reference(wb[CHART_DATA], min_col=2, min_row=1, max_row=last),
+    ch.add_data(Reference(data, min_col=2, min_row=1, max_row=last),
                 titles_from_data=True)
     ch.set_categories(years)
     _style_line(ch.series[0], SERIES_1)
@@ -706,7 +721,7 @@ def _add_charts(wb: Workbook, result: ModelRun) -> None:
     #    they share an axis honestly -- plus the covenant as a dashed rule.
     ch = LineChart()
     ch.title = "Interest cover against the covenant"
-    ch.add_data(Reference(wb[CHART_DATA], min_col=3, max_col=5, min_row=1, max_row=last),
+    ch.add_data(Reference(data, min_col=3, max_col=5, min_row=1, max_row=last),
                 titles_from_data=True)
     ch.set_categories(years)
     _style_line(ch.series[0], SERIES_1)
@@ -743,7 +758,7 @@ def _add_charts(wb: Workbook, result: ModelRun) -> None:
     ch.grouping = "stacked"
     ch.overlap = 100          # without this Excel leaves gaps and the stack lies
     ch.title = "Where the capital comes from"
-    ch.add_data(Reference(wb[CHART_DATA], min_col=6, max_col=8, min_row=1, max_row=last),
+    ch.add_data(Reference(data, min_col=6, max_col=8, min_row=1, max_row=last),
                 titles_from_data=True)
     ch.set_categories(years)
     for ser, colour in zip(ch.series, (SERIES_1, SERIES_2, SERIES_3)):
@@ -756,10 +771,11 @@ def _add_charts(wb: Workbook, result: ModelRun) -> None:
     ws.add_chart(ch, "F37")
 
 
-def _comparison_chart(wb: Workbook, results: dict[str, ModelRun]) -> None:
+def _comparison_chart(wb: Workbook, results: dict[str, ModelRun],
+                      prefix: str = "") -> None:
     """Portfolio at year 50 across the three scenarios. One measure, one axis."""
     ws = wb["Scenario Comparison"]
-    anchor = wb[CHART_DATA]
+    anchor = wb[_sheet_name(CHART_DATA, prefix)]
     anchor.cell(row=1, column=10, value="Scenario")
     anchor.cell(row=1, column=11, value="Properties at year 50")
     for k, (name, r) in enumerate(results.items(), start=2):
@@ -781,7 +797,7 @@ def _comparison_chart(wb: Workbook, results: dict[str, ModelRun]) -> None:
 
 
 def _what_if(wb: Workbook, result: ModelRun,
-             results: dict[str, ModelRun]) -> None:
+             results: dict[str, ModelRun], prefix: str = "") -> None:
     """
     A live, editable per-house calculator. The only sheet with real formulas.
 
@@ -804,7 +820,7 @@ def _what_if(wb: Workbook, result: ModelRun,
     scale efficiency -- none of it is here.
     """
     a = result.assumptions
-    ws = wb.create_sheet("What-if", 2)
+    ws = wb.create_sheet(_sheet_name("What-if", prefix))
     row = _title(ws, "What-if \u2014 one house, steady state",
                  "The only sheet with live formulas. Edit the blue cells and everything below "
                  "recalculates. ONE house of a single type \u2014 not the blended portfolio \u2014 and "
@@ -1119,6 +1135,60 @@ def write_workbook(path: str, scenario: str = "base",
     _chart_data_sheet(wb, result)
     _add_charts(wb, result)
     _comparison_chart(wb, results)
+
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    wb.save(path)
+    return path
+
+
+def write_combined(path: str, results: dict[str, ModelRun] | None = None) -> str:
+    """
+    One workbook holding every scenario, instead of three that overlap.
+
+    The per-scenario export writes nine sheets, and three of them -- For Review,
+    Scenario Comparison and Assumptions -- already cover all three scenarios.
+    Exporting each scenario separately therefore produced those three sheets as
+    byte-identical triplicates, which is not just waste: it makes the Base file
+    look complete when it is missing Optimistic's and Stress's statements
+    entirely. Someone reading it would reasonably believe they had seen
+    everything.
+
+    So the shared sheets are written once, at the front, and the detail sheets
+    are written per scenario behind them. The reading order is deliberate: what
+    the reviewer needs to decide, then the comparison, then the inputs, then as
+    much detail as they want.
+    """
+    results = results or run_all()
+    order = [k for k in ("base", "optimistic", "stress") if k in results]
+
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    # Shared, written once.
+    _for_review(wb, results)
+    _comparison(wb, results)
+    _assumptions_sheet(wb, results)
+
+    # Per scenario.
+    for name in order:
+        r = results[name]
+        tag = name.title()
+        _dashboard(wb, r, tag)
+        _what_if(wb, r, results, tag)
+        _financial_statements(wb, r, tag)
+        _monthly(wb, r, tag)
+        _asset_register(wb, r, tag)
+        _capital(wb, r, tag)
+
+    # Charts last: they point at cells, so their sheets must already exist.
+    for name in order:
+        r = results[name]
+        tag = name.title()
+        _chart_data_sheet(wb, r, tag)
+        _add_charts(wb, r, tag)
+    # Hangs off the first scenario's data sheet; any would do, but it has to
+    # be one that exists.
+    _comparison_chart(wb, results, order[0].title())
 
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     wb.save(path)

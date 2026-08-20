@@ -26,6 +26,8 @@ def main() -> int:
     parser.add_argument("--scenario", default="base",
                         help="scenario for the single-scenario Excel workbook (default: base)")
     parser.add_argument("--skip-excel", action="store_true", help="only build the explorer bundle")
+    parser.add_argument("--separate", action="store_true",
+                        help="one workbook per scenario instead of a single combined one")
     args = parser.parse_args()
 
     print("Running the model ...")
@@ -44,8 +46,15 @@ def main() -> int:
 
     if not args.skip_excel:
         print("\nExcel workbook")
-        xlsx_path = os.path.join(DIST_DIR, f"SLC_Financial_Model_{args.scenario}.xlsx")
-        excel_export.write_workbook(xlsx_path, args.scenario, results)
+        if args.separate:
+            xlsx_path = os.path.join(DIST_DIR, f"SLC_Financial_Model_{args.scenario}.xlsx")
+            excel_export.write_workbook(xlsx_path, args.scenario, results)
+        else:
+            # The default. Three separate workbooks repeated three identical
+            # sheets and left the Base file looking complete when it held no
+            # detail for the other two scenarios.
+            xlsx_path = os.path.join(DIST_DIR, "SLC_Financial_Model.xlsx")
+            excel_export.write_combined(xlsx_path, results)
         print(f"  {os.path.relpath(xlsx_path, ROOT)}")
 
         print("\nCSVs")
