@@ -332,7 +332,12 @@ admin_costs_target:
   acct_target: 8000              # Accounting & audit (£ p.a.)
   fca_target: 3000               # FCA & annual reporting (£ p.a.)
   ins_target: 2000               # Insurance (£ p.a.)
-  admin_per_prop: 150            # Variable admin per property (£ / property / yr)
+  # Zero, deliberately. Property-level admin is already inside the 16.67% of
+  # rent taken by lc_maintenance_months, which covers admin AND maintenance.
+  # Charging it here as well counted the same cost twice. Kept as a
+  # parameter rather than deleted because the frozen port-reference
+  # assumptions still carry the workbook's 150 and must keep reproducing it.
+  admin_per_prop: 0              # Variable admin per property (GBP/property/yr)
 
 reserves:
   reserve_tgt_months: 6          # Target reserve (months of debt service)
@@ -378,7 +383,13 @@ operating_efficiency:
 
 capex_maintenance:
   sinking_per_prop: 1500         # Sinking fund contribution (£ / property / yr)
-  maint_per_prop: 700            # Structural maintenance spend (£ / property / yr)
+  # Zero, for the same reason: day-to-day and structural repairs are inside
+  # the 16.67%. The SINKING FUND below stays separate -- major works and
+  # retrofit are lumpy, long-dated and not fundable out of a share of
+  # monthly rent. The intention is to fund those with short-dated shares
+  # issued against a specific programme, which raises rent marginally for
+  # the houses in that pool. Not yet modelled.
+  maint_per_prop: 0              # Structural maintenance spend (GBP/property/yr)
   sinking_return: 0.0            # Sinking fund investment return (% p.a.)
 
 market_shock:

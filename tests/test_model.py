@@ -551,19 +551,24 @@ def test_efficiency_lowers_running_costs_but_not_the_sinking_fund():
     works. Buying scaffolding more cheaply does not mean the roof needs
     replacing less often, so scaling the provision with estate size would
     quietly under-provision a growing portfolio.
+
+    Property-level running costs now sit inside the 16.67% of rent rather than
+    in admin_variable and maint_per_prop, which were double-counting them. So
+    the saving is tested where it now lives: the share of rent the Commons
+    keeps, which rises as the estate grows. admin_variable is legitimately zero.
     """
     from engine.assumptions import load
 
     off = load("base")
-    off.values["opex_learning_rate"] = 1.0
+    off.values["lc_cost_learning_rate"] = 1.0
     on = load("base")
 
     a, b = run(off), run(on)
 
-    # Running costs fall...
-    assert sum(b.state.growth.admin_variable) < sum(a.state.growth.admin_variable)
-    assert sum(-v for v in b.state.assets.maintenance_spend) < sum(
-        -v for v in a.state.assets.maintenance_spend
+    # Running costs fall -- the Commons keeps more of each pound of rent...
+    assert b.state.assets.lc_share_effective[-1] > a.state.assets.lc_share_effective[-1]
+    assert a.state.assets.lc_share_effective[-1] == pytest.approx(1 - 2 / 12), (
+        "with learning switched off the share should stay at its small-scale level"
     )
     # ...the provision does not, at equal portfolio size.
     for i, (x, y) in enumerate(
