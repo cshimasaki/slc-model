@@ -221,10 +221,14 @@ bequests_gifts:
 
 rent_yield:
   _title: "Rent & Yield"
+
   gross_yield:
-    label: "Gross rental yield"
+    label: "Gross rental yield (derived from the stock mix)"
     unit: "% of purchase price"
     row: 41
+    # Total rent over total price across stock_mix. Not an input: the way to
+    # change it is to change what the Commons buys.
+    derived: true
   # `lc_share` (row 42) is deliberately absent. It was a flat 80% and is now
   # derived per year from the three parameters below, so it is no longer an
   # input. The frozen port-reference assumptions still carry the flat value,
@@ -246,12 +250,21 @@ rent_yield:
     unit: "%"
     row: 43
 
+stock_mix:
+  _title: "Stock Mix — what the Commons buys"
+  stock_types:
+    label: "Acquisition mix: share, price and rent for each kind of property"
+    unit: "list"
+    row: 0
+
 acquisition:
   _title: "Acquisition"
+
   avg_price:
-    label: "Average property price (real, Year 1)"
+    label: "Average property price, real Year 1 (derived from the stock mix)"
     unit: "£"
     row: 45
+    derived: true
   sdlt_rate:
     label: "SDLT rate (charitable relief)"
     unit: "% of price"

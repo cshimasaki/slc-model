@@ -651,3 +651,79 @@ def test_excel_round_is_half_away_from_zero():
 def test_excel_int_floors_toward_negative_infinity():
     assert excel_int(1.9) == 1
     assert excel_int(-1.1) == -2        # Python's int() gives -1
+
+
+def test_stock_mix_blends_by_capital_not_by_averaging_yields():
+    """
+    The blended yield is total rent over total price, not the mean of yields.
+
+    Averaging each type's yield would weight a GBP 166,000 flat equally with a
+    GBP 342,000 semi and overstate what the portfolio earns -- the flat is the
+    higher-yielding one, so the error flatters.
+    """
+    from engine import stock
+
+    types = [
+        {"name": "cheap, high yield", "share": 0.5, "price": 100_000, "rent_pcm": 1_000},
+        {"name": "dear, low yield", "share": 0.5, "price": 300_000, "rent_pcm": 1_000},
+    ]
+    price, yld = stock.blended(types)
+
+    assert price == pytest.approx(200_000)
+    # Half the houses cost 100k and half cost 300k, all letting for 12k a year:
+    # 12k of rent against 200k of capital, so 6.0%.
+    assert yld == pytest.approx(0.06)
+
+    # Averaging the two yields instead gives 8.0% -- it credits the cheap
+    # high-yielding house with half the portfolio's weight when it only absorbs
+    # a quarter of its capital. That error always flatters.
+    naive = (12_000 / 100_000 + 12_000 / 300_000) / 2
+    assert naive == pytest.approx(0.08)
+    assert yld < naive, "capital-weighting must not be replaced by averaging yields"
+
+
+def test_stock_shares_must_sum_to_one():
+    """A mix that does not sum to 1.0 is a typo, not something to normalise."""
+    from engine import stock
+
+    types = [
+        {"name": "a", "share": 0.5, "price": 200_000, "rent_pcm": 900},
+        {"name": "b", "share": 0.3, "price": 200_000, "rent_pcm": 900},
+    ]
+    with pytest.raises(stock.StockError, match="sum to 0.8"):
+        stock.blended(types)
+
+
+def test_stock_mix_drives_price_and_yield_in_every_scenario():
+    """avg_price and gross_yield are outputs of the mix, not free inputs."""
+    from engine import stock
+    from engine.assumptions import load
+
+    for name in ("base", "optimistic", "stress"):
+        a = load(name)
+        price, yld = stock.blended(a.stock_types)
+        assert a.avg_price == pytest.approx(price)
+        assert a.gross_yield == pytest.approx(yld)
+
+    # Optimistic buys better stock, Stress is pushed into worse -- and neither
+    # moves rent, which is the point: the yield spread is an acquisition
+    # decision, not a tenant one.
+    assert load("optimistic").gross_yield > load("base").gross_yield
+    assert load("stress").gross_yield < load("base").gross_yield
+
+
+def test_same_rent_dearer_house_is_a_worse_asset():
+    """
+    A 3-bed semi and a 3-bed terrace let for the same money; the semi costs
+    more. The model must show that as a lower yield, since it is the whole
+    reason stock selection matters.
+    """
+    from engine import stock
+
+    terrace = [{"name": "terrace", "share": 1.0, "price": 287_000, "rent_pcm": 1176}]
+    semi = [{"name": "semi", "share": 1.0, "price": 342_000, "rent_pcm": 1176}]
+
+    _, y_terrace = stock.blended(terrace)
+    _, y_semi = stock.blended(semi)
+    assert y_terrace > y_semi
+    assert y_terrace - y_semi == pytest.approx(0.0079, abs=1e-4)

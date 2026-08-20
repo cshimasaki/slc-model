@@ -15,6 +15,8 @@ from typing import Any
 
 import yaml
 
+from . import stock
+
 ASSUMPTIONS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assumptions")
 
 # Model horizon, fixed by the workbook's layout (columns D:BA).
@@ -83,6 +85,17 @@ def _derive(values: dict[str, Any]) -> None:
     values["pf_coupon_spread"] = (
         values["pf_investor_rate"] + values["pf_fund_op_margin"] + values["pf_fund_reg_charge"]
     )
+
+    # The average house and its yield come from the acquisition mix, when one is
+    # given. Everything downstream still reads `avg_price` and `gross_yield`, so
+    # the cohort machinery is untouched -- the mix just decides what those two
+    # numbers are, instead of somebody typing an average and hoping.
+    #
+    # Absent in the frozen port-reference assumptions, which carry the
+    # workbook's single average house directly. That is what keeps the Excel
+    # comparison valid.
+    if "stock_types" in values:
+        values["avg_price"], values["gross_yield"] = stock.blended(values["stock_types"])
 
 
 def load(scenario: str, assumptions_dir: str | None = None) -> Assumptions:

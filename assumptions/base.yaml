@@ -280,12 +280,12 @@ bequests_gifts:
                                      # property chosen and bought on the market.
 
 rent_yield:
-  # Gross yield stays at 5.00%. It was briefly raised to 5.50% as a covenant
-  # lever before anyone worked out what that meant: on a GBP 280,000 house it is
-  # rent going from GBP 1,167 to GBP 1,283 a month, a 10% increase paid by
-  # tenants to make a financing ratio work. The commitment is that rent stays
-  # below market, so this dial is not available and should not be reached for.
-  gross_yield: 0.05              # Gross rental yield (% of purchase price)
+
+  # gross_yield is DERIVED from stock_mix below -- it is total rent over total
+  # price across the acquisition mix. Raising it was briefly used as a covenant
+  # lever before anyone worked out that it meant a 10% rent rise paid by
+  # tenants. Rent stays below market; the way to a better yield is buying
+  # better stock, which is now an explicit decision rather than a dial.
 
   # What maintenance and the other running costs of the houses absorb, stated
   # the way the trade states it: about two months of rent out of twelve. That is
@@ -311,8 +311,54 @@ rent_yield:
   # lc_share: 0.80, which is what reproduces the workbook.
   void_rate: 0.05                # Void rate (%)
 
+stock_mix:
+  # WHAT WE BUY. The largest single lever in the model, and not a financing one.
+  #
+  # Rent tracks BEDROOMS; price tracks PROPERTY TYPE. They come apart, and that
+  # gap is the whole point of this section. Stroud, ONS mid-2026:
+  #
+  #     Terraced 3-bed      GBP 287,000   GBP 1,176 pcm   4.92%
+  #     Semi-detached 3-bed GBP 342,000   GBP 1,176 pcm   4.13%
+  #     Terraced 2-bed      GBP 287,000   GBP   960 pcm   4.01%
+  #     Flat/maisonette 2-b GBP 166,000   GBP   960 pcm   6.94%
+  #
+  # A 3-bed terrace and a 3-bed semi let for exactly the same money, and the
+  # semi costs GBP 55,000 more -- 19% more capital for identical income. The
+  # spread between the best and worst stock here is wider than moving the LTV
+  # limit from 70% to 30%.
+  #
+  # Prices are ONS averages for the property TYPE across the district, matched
+  # to ONS average rent for that BEDROOM count. Do not take the district average
+  # rent (GBP 1,039) over the district average price (GBP 349,000): those are
+  # different populations -- the sale figure includes GBP 563,000 detached
+  # houses that never reach the rental market -- and dividing one by the other
+  # understates the yield on lettable stock by about 140bp.
+  #
+  # The default mix leans on 3-bed terraces as the core of the portfolio, with
+  # some flats for yield and a small number of semis. It is a policy choice, not
+  # a forecast, and it is the first thing to change when testing what the
+  # Commons should be buying.
+  stock_types:
+    - name: "Terraced, 3-bed"
+      share: 0.50
+      price: 287000
+      rent_pcm: 1176
+    - name: "Flat / maisonette, 2-bed"
+      share: 0.20
+      price: 166000
+      rent_pcm: 960
+    - name: "Terraced, 2-bed"
+      share: 0.20
+      price: 287000
+      rent_pcm: 960
+    - name: "Semi-detached, 3-bed"
+      share: 0.10
+      price: 342000
+      rent_pcm: 1176
+
 acquisition:
-  avg_price: 280000              # Average property price, real Year 1 (£)
+
+  # avg_price is DERIVED from stock_mix below.
   sdlt_rate: 0.0                 # SDLT rate — 0 assumes charitable relief (% of price)
   conveyancing: 2500             # Conveyancing per property, real (£)
   survey_cost: 800               # Survey per property, real (£)

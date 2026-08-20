@@ -48,12 +48,7 @@ bequests_gifts:
   gift_property_rate: 1.0     # was 0.5
 
 rent_yield:
-  # was 0.05. Read this as buying BETTER, not charging more: a higher yield here
-  # means properties acquired at keener prices, off-market or from motivated
-  # sellers, at the same rent. Rent stays below market in every scenario -- that
-  # is a commitment, not a variable, and raising it to make a covenant work is
-  # explicitly not available. See the note on gross_yield in base.yaml.
-  gross_yield: 0.055
+
   # was 2.0 months. A maintenance function that matures faster: better
   # contractor rates, fewer emergency call-outs, planned rather than reactive.
   # 1.6 months leaves the Commons 86.7% of gross rent at small scale.
@@ -74,3 +69,25 @@ capex_maintenance:
 
 market_shock:
   hpi_shock_pct: 0.10        # was -0.20; inert here, hpi_shock_year is 0
+
+stock_mix:
+  # "Buying better" made explicit. Same commitment on rent -- it stays below
+  # market in every scenario -- but a mix weighted toward the stock that earns
+  # most per pound of capital: more flats and 3-bed terraces, no semis at all.
+  # Blended yield rises to about 5.4% without a single tenant paying more.
+  #
+  # This replaces the old gross_yield: 0.055 override, which achieved the same
+  # number by implying a 10% rent rise and calling it optimism.
+  stock_types:
+    - name: "Terraced, 3-bed"
+      share: 0.45
+      price: 287000
+      rent_pcm: 1176
+    - name: "Flat / maisonette, 2-bed"
+      share: 0.40
+      price: 166000
+      rent_pcm: 960
+    - name: "Terraced, 2-bed"
+      share: 0.15
+      price: 287000
+      rent_pcm: 960
