@@ -39,23 +39,33 @@ def opening_portfolio(s: ModelState, i: int) -> None:
     s.growth.portfolio_opening.append(prior(s.growth.portfolio_closing, i))
 
 
-def costs_and_capacity(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
+def unit_cost(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
     """
-    Rows 23, 27, 24, 25 -- what a property costs, and what we can afford.
+    Row 23 -- the all-in cost of one property.
 
-    Must run after this year's gift income and community-share flows are known
-    (they are current-year cash) but before the acquisition count is settled.
+    Split out from the capacity calculation because community share issuance
+    can now be sized as a proportion of what this year's planned purchases will
+    cost, so the cost has to be known before shares are decided. It depends
+    only on price indices, so it can be computed at any point in the year.
+
+    The purchase price moves with house prices; the transaction and retrofit
+    costs move with CPI. Two different index series, deliberately.
     """
-    g, c = s.growth, s.capital
-    year = i + 1
-
-    # Row 23: all-in cost of one property. The purchase price moves with house
-    # prices; the transaction and retrofit costs move with CPI. Two different
-    # index series, deliberately.
-    g.unit_acquisition_cost.append(
+    s.growth.unit_acquisition_cost.append(
         m.avg_price[i] * (1 + a.sdlt_rate)
         + (a.conveyancing + a.survey_cost + a.retrofit_cost) * m.cost_index[i]
     )
+
+
+def capacity(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
+    """
+    Rows 27, 24, 25 -- what we can afford, given this year's inflows.
+
+    Runs after gift income and community-share flows are known, since both are
+    current-year cash, and before the acquisition count is settled.
+    """
+    g, c = s.growth, s.capital
+    year = i + 1
 
     # Row 27: is new Tontine capital available this year at all? Only during the
     # investment phase, only before any refinancing, and only while the £50m

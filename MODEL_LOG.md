@@ -578,6 +578,119 @@ a competing SLC model, so most of it sits above this one. Three findings:
 
 ---
 
+## The funding mix becomes a variable — and turns out to be an output, not an input
+
+**Branch:** `structure/funding-mix` · **Date:** 2026-08-20 · **Decision:** adopt the
+mechanism, park the target weights
+
+**Hypothesis.** The 17% / 56% / 27% split between Tontine, community shares and
+gifts that the model had been producing was not a finding. It was an artefact of
+three unrelated V2.1 parameters — a flat annual share issuance, a fixed gift
+baseline, and a Tontine that only ever drew the residual — colliding. Nobody
+chose it. So the mix should be something the model is *told*, not something it
+happens to produce.
+
+The intended shape, from the design discussion: Tontine around 80% at the start
+because that is where large sums of pensioner capital actually sit, community
+shares around 15%, the remaining 5% split between gifts and RCOs. As later
+cohorts arrive the weight shifts toward shares and RCOs, but never away from the
+Tontine entirely. The Tontine takes up the slack, and viability is the ceiling.
+
+These weights are judgement, not evidence, and the assumptions file says so in
+those words.
+
+**What changed.**
+
+`engine/funding_mix.py` (new) holds `weights_for_year()`: a linear glide from the
+start weights to the end weights over `mix_transition_years`, defaulting to
+80/15/5 gliding to 30/50/20 across 30 years.
+
+`engine/capital_debt.py::community_shares()` gains a `share_of_need` mode. Shares
+are now issued as their target proportion of what this year's planned purchases
+will cost, rather than a flat inflated amount. The old `fixed` behaviour is kept
+and selectable, because it is what the workbook did and the validation harness
+still has to reproduce it.
+
+Only shares are targeted. Gifts arrive on their own terms and the Tontine draws
+whatever acquisitions still need — which is precisely "the Tontine takes up the
+slack" expressed as code.
+
+This forced a reordering of the year loop in `engine/model.py`. Share issuance
+now has to know the unit acquisition cost, which used to be computed after it.
+`growth.costs_and_capacity` is split into `unit_cost` (row 23, depends only on
+price indices) and `capacity` (rows 27, 24, 25, depends on current-year cash), so
+the cost can be established early and the capacity test still run late. No
+behaviour changes in `fixed` mode; validation confirms it.
+
+**Result.** The mechanism works. Within the investment phase the realised Tontine
+share tracks its target closely — 67% to 74% in years 2 to 10 against a target
+falling from 78% to 65%.
+
+Across the full 50 years it does not, and the reason is structural rather than a
+calibration problem. Under Base the cumulative split is Tontine 11%, shares 72%,
+gifts 17%. The Tontine stops drawing at year 10 when the investment phase closes,
+while shares keep issuing for another forty. The intended glide from 80% down to
+30% over thirty years cannot happen inside a ten-year raise. The target weights
+and the closed-end structure are describing different instruments.
+
+So the obvious question: extend the phase. Under Base, lengthening it does lift
+the Tontine's share, but every step costs cover.
+
+| phase | cap | Tontine | houses | net assets | min cover | years in breach |
+|------:|----:|--------:|-------:|-----------:|----------:|----------------:|
+| 10 | £50m | 11% | 123 | £160m | 1.24 | 1 |
+| 20 | £50m | 28% | 192 | £260m | 1.06 | 14 |
+| 30 | £50m | 44% | 204 | £302m | 1.06 | 17 |
+| 30 | £100m | 53% | 205 | £307m | 1.06 | 19 |
+| 50 | £100m | 61% | 207 | £299m | 1.06 | 19 |
+
+Two things to read off it. The Tontine share plateaus around 61% and will not
+reach 80% at any phase length, because gifts and shares keep arriving and the
+Tontine only ever takes the remainder. And raising the £50m cap buys very little
+past a thirty-year phase — at £100m the fund still only draws £79m, because LTV
+headroom binds before the cap does.
+
+Under Stress the trade is much worse:
+
+| phase | cap | Tontine | houses | net assets | min cover | years in breach |
+|------:|----:|--------:|-------:|-----------:|----------:|----------------:|
+| 10 | £50m | 8% | 56 | £149m | 1.14 | 7 |
+| 20 | £50m | 21% | 125 | £319m | 0.76 | 26 |
+| 30 | £100m | 40% | 186 | £442m | 0.72 | 36 |
+| 50 | £100m | 45% | 193 | £441m | 0.72 | 38 |
+
+Stress goes from seven breach years to twenty-six on the first step. Minimum
+cover falls to 0.76 — below one, meaning rent does not meet interest at all in
+the worst year. The portfolio more than doubles and net assets look excellent,
+which is exactly the trap: the balance sheet improves while the ability to pay
+the annuity fails. Since the annuity is the promise that has to be kept, the
+balance sheet is not the test.
+
+Taking "viability is the ceiling" literally, the ceiling sits somewhere between a
+ten and twenty-year investment phase. Base tolerates twenty; Stress does not.
+
+**Decision.** Adopt the mechanism. `base.yaml` keeps `pf_invest_phase_yrs: 10`
+unchanged, so this branch does not move the headline numbers — the mix targets
+are declared and the machinery honours them, but the closed-end structure still
+governs what actually gets raised.
+
+The target weights are parked rather than rejected. They describe an evergreen or
+tranched Tontine, and that is a structural decision with its own regulatory
+consequences (the NDF threshold work above), not a parameter change. This branch
+establishes that the mix is now a lever we can pull; it also establishes that
+pulling it is not free.
+
+**Also fixed here.** Gifted properties were bypassing the growth ceiling.
+Purchases are capped at `logistic_ceiling` via the growth curve, but gifts were
+added on top with no test, so Optimistic reached 252 houses against a ceiling of
+250. The ceiling is the carrying capacity of the acquisition process — nobody
+declines a donated house because a growth parameter says the portfolio is full —
+so the fix is in the test, which now checks purchases against the ceiling and
+attributes any excess to gifts. Latent since the property-gifts work; only
+surfaced because the new mix grows Optimistic fast enough to reach its ceiling.
+
+---
+
 ## Planned — not yet started
 
 Recorded 2026-08-07 from the design discussion, so the sequence is not lost.

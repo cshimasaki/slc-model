@@ -26,7 +26,7 @@ normal loan in three ways:
 
 from __future__ import annotations
 
-from . import tontine_runoff
+from . import funding_mix, tontine_runoff
 from .assumptions import Assumptions
 from .excelfns import prior
 from .macro import MacroSeries
@@ -95,8 +95,24 @@ def community_shares(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> N
     c = s.capital
     year = i + 1
 
-    # Row 18: what the community would subscribe, unconstrained.
-    c.cs_target_issuance.append(a.cs_baseline_issue * a.cs_takeup_mult * m.cost_index[i])
+    # Row 18: what the community would subscribe, before the cap bites.
+    #
+    #   "fixed"          the original: a flat real amount each year, inflated.
+    #                    Whatever mix resulted was an accident of that number.
+    #   "share_of_need"  issue a target proportion of what this year's planned
+    #                    purchases will cost, so the mix is chosen rather than
+    #                    inherited. See engine/funding_mix.py.
+    #
+    # The basis is the GROWTH CURVE's desired purchases, not actual ones.
+    # Actual purchases depend on funding, which depends on this number -- using
+    # them here would be circular. The curve is set by policy and capability,
+    # independently of money, so it breaks the loop.
+    if getattr(a, "cs_issue_mode", "fixed") == "share_of_need":
+        _, share_w, _ = funding_mix.weights_for_year(a, year)
+        desired_cost = s.growth.curve_properties[i] * s.growth.unit_acquisition_cost[i]
+        c.cs_target_issuance.append(share_w * desired_cost)
+    else:
+        c.cs_target_issuance.append(a.cs_baseline_issue * a.cs_takeup_mult * m.cost_index[i])
 
     # Row 19: all other capital, from last year's balance sheet. Zero in Year 1.
     c.cs_other_capital.append(

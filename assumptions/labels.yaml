@@ -140,6 +140,33 @@ community_shares:
     unit: "% p.a."
     row: 34
 
+funding_mix:
+  _title: "Funding Mix (target proportions — judgement, not evidence)"
+  cs_issue_mode:
+    label: "Share issuance basis (share_of_need = targeted mix; fixed = flat annual amount)"
+    unit: "text"
+    row: 0
+  mix_tontine_start:
+    label: "Tontine share of funding, year 1"
+    unit: "%"
+    row: 0
+  mix_shares_start:
+    label: "Community share of funding, year 1"
+    unit: "%"
+    row: 0
+  mix_tontine_end:
+    label: "Tontine share of funding, after transition"
+    unit: "%"
+    row: 0
+  mix_shares_end:
+    label: "Community share of funding, after transition"
+    unit: "%"
+    row: 0
+  mix_transition_years:
+    label: "Years over which the mix glides from start to end"
+    unit: "years"
+    row: 0
+
 bequests_gifts:
   _title: "Bequests & Gifts"
   gift_baseline:

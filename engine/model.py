@@ -79,14 +79,21 @@ def run(
     assets.init_cohorts(s, n_years)
 
     for i in range(n_years):
-        # 1. Free capital and junior debt, both driven by last year's position.
+        # 1. Gifts arrive on their own terms -- they cannot be targeted.
         capital_debt.gifts(s, a, m, i)
+
+        # 2. How many houses do we WANT, and what would they cost? Both are
+        #    independent of funding, which is what lets share issuance be sized
+        #    as a proportion of need without becoming circular.
+        growth.opening_portfolio(s, i)
+        growth.unit_cost(s, a, m, i)
+        growth.growth_curve(s, a, i)
+
+        # 3. Community shares, now optionally a share of that cost.
         capital_debt.community_shares(s, a, m, i)
 
-        # 2-3. How much can we afford, how much do we want, how many do we buy.
-        growth.opening_portfolio(s, i)
-        growth.costs_and_capacity(s, a, m, i)
-        growth.growth_curve(s, a, i)
+        # 4. What can we actually afford, and how many do we buy.
+        growth.capacity(s, a, m, i)
         growth.acquisitions(s, a, i)
         growth.admin_costs(s, a, m, i)
 

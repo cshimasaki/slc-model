@@ -136,6 +136,38 @@ community_shares:
   cs_takeup_mult: 1.0            # Take-up multiplier (x)
   cs_withdrawal_rate: 0.02       # Annual withdrawal rate on eligible shares (% p.a.)
 
+funding_mix:
+  # What proportion of each year's planned purchases comes from where.
+  #
+  # THESE WEIGHTS ARE JUDGEMENT, NOT EVIDENCE. They were offered as "just
+  # numbers in my head... it feels like a fairly plausible ratio", and should
+  # be read that way until there is real fundraising experience to replace
+  # them. Together with cs_baseline_issue and the gift lines, they are the
+  # least evidenced and most consequential inputs in the model.
+  #
+  # The reasoning behind the shape: the Tontine leads early because that is
+  # where retired people's capital sits, and because a new organisation has no
+  # track record to sell community shares against. As the balance sheet grows
+  # and the evidence accumulates, shares and Rent Credit Obligations take over.
+  #
+  # Gifts are NOT targeted -- you cannot decide to receive one. They arrive on
+  # their own terms and reduce what the others must find. The residual weight
+  # is an expectation of gifts and RCOs, not an instruction.
+  #
+  # The Tontine takes the slack: if shares fall short or gifts do not arrive,
+  # it covers the difference, subject only to its LTV headroom and raise cap.
+  # The ceiling on the Tontine is viability, not a quota.
+  #
+  # Set cs_issue_mode to "fixed" to ignore all of this and revert to a flat
+  # annual share issuance, which is what the V2.1 spreadsheet did.
+  cs_issue_mode: share_of_need   # "share_of_need" | "fixed"
+
+  mix_tontine_start: 0.80        # year 1
+  mix_shares_start: 0.15         # remainder (5%) expected from gifts and RCOs
+  mix_tontine_end: 0.30          # after the transition
+  mix_shares_end: 0.50           # remainder (20%) from gifts and RCOs
+  mix_transition_years: 30       # linear glide; a placeholder shape, not a forecast
+
 bequests_gifts:
   gift_baseline: 40000           # Cash gifts from living donors, Gift Aid eligible (£ p.a.)
   beq_baseline: 60000            # Bequests from estates, not Gift Aid eligible (£ p.a.)
