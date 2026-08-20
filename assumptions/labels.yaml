@@ -128,9 +128,13 @@ tontine_fund:
 community_shares:
   _title: "Community Shares (Junior Debt)"
   cs_dividend_rate:
-    label: "Default dividend rate (override per year on Capital & Debt)"
+    label: "Advertised share interest rate (a cap, paid at board discretion)"
     unit: "% p.a."
     row: 28
+  cs_interest_after_reserve:
+    label: "Pay share interest only after the reserve is topped up?"
+    unit: "true / false"
+    row: 0
   cs_max_pct_capital:
     label: "Maximum issuance cap"
     unit: "% of total capital"

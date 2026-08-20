@@ -152,10 +152,30 @@ def dividends(s: ModelState, a: Assumptions, i: int) -> None:
     """
     c = s.capital
     c.cs_dividend_rate.append(a.cs_dividend_rate)
-    c.cs_dividends.append(
-        min(c.cs_opening[i] * c.cs_dividend_rate[i],
-            max(0.0, s.statements.surplus_before_div_tax[i]))
-    )
+
+    # What the offer document advertises. Under the Co-operative and Community
+    # Benefit Societies Act 2014 this is a CAP, not a promise: the rate must be
+    # the minimum necessary to attract and retain the capital, profits cannot be
+    # distributed on share capital, and payment is at the board's discretion.
+    # Societies routinely pay nothing in early years and step up once the
+    # project is cash-generative, which is legally clean precisely because
+    # nothing was ever owed.
+    offered = c.cs_opening[i] * c.cs_dividend_rate[i]
+
+    # What is actually available, and in what order.
+    #
+    # `surplus_before_div_tax` is already struck after Tontine and mortgage
+    # interest, so share interest is subordinated to the annuity by
+    # construction. Subordinating it to the RESERVE as well is the step that
+    # makes "interest eats the project" structurally impossible rather than
+    # merely unlikely: money is only available to shareholders once the reserve
+    # the annuity depends on has been topped up.
+    available = max(0.0, s.statements.surplus_before_div_tax[i])
+    if getattr(a, "cs_interest_after_reserve", False):
+        shortfall = max(0.0, c.target_reserve[i] - prior(s.statements.free_cash, i))
+        available = max(0.0, available - shortfall)
+
+    c.cs_dividends.append(min(offered, available))
 
 
 # -------------------------------------------------------------- tontine ----
@@ -384,6 +404,19 @@ def coverage(s: ModelState, a: Assumptions, i: int) -> None:
     c.cs_interest_due.append(c.cs_opening[i] * a.cs_dividend_rate)
     c.cs_interest_shortfall.append(max(0.0, c.cs_interest_due[i] - c.cs_dividends[i]))
 
+    # Two different questions, so two different ratios. Conflating them was the
+    # mistake in the previous version, which divided everything by the all-in
+    # figure and reported that Stress failed -- when what it had found was that
+    # Stress could not pay the SHARE interest, which is a thing Stress is
+    # entitled to not pay.
+    #
+    #   senior   can rent service the annuity? The Tontine investor's covenant.
+    #            Share interest is excluded because it ranks behind them and is
+    #            discretionary; a year with no share interest is a working year,
+    #            not a default.
+    #   all-in   can rent service everything the capital stack would LIKE to be
+    #            paid? Not a covenant -- a health measure, and the one that says
+    #            whether the share offer is deliverable as advertised.
     service = c.total_debt_service[i]
     # The workbook's DSCR and reserve cover are computed on debt service alone,
     # because the sheet left share interest out of every covenant test. Those
@@ -393,32 +426,33 @@ def coverage(s: ModelState, a: Assumptions, i: int) -> None:
     financing = service + c.cs_interest_due[i]
     c.total_financing_cost.append(financing)
 
-    if service <= 0 and financing <= 0:
-        c.dscr.append("")                                                      # row 64
-        c.reserve_cover.append("")                                             # row 65
-        c.cash_interest_cover.append("")
-        c.rent_only_cover.append("")
-        return
+    non_cash = s.assets.gift_property_value[i]
+    all_gifts = s.statements.gifts_and_bequests[i] + s.statements.gift_aid[i]
 
     if service <= 0:
         c.dscr.append("")                                                      # row 64
         c.reserve_cover.append("")                                             # row 65
+        c.cash_interest_cover.append("")
+        c.rent_only_cover.append("")
     else:
         c.dscr.append(s.statements.operating_surplus[i] / service)
         c.reserve_cover.append(s.statements.free_cash[i] / (service / 12))
 
-    # Cash cover: strip out donated property. It is income, and it is an
-    # asset, but it is not money -- interest cannot be paid with a house.
-    non_cash = s.assets.gift_property_value[i]
-    c.cash_interest_cover.append(
-        (s.statements.operating_surplus[i] - non_cash) / financing
-    )
+        # Cash cover: strip out donated property. It is income, and it is an
+        # asset, but it is not money -- interest cannot be paid with a house.
+        c.cash_interest_cover.append(
+            (s.statements.operating_surplus[i] - non_cash) / service
+        )
 
-    # Rent-only cover: strip out every gift, cash included. This asks the
-    # harder question -- can the portfolio service its own financing from the
-    # rent it earns, with no reliance on giving that nobody is obliged to
-    # continue?
-    all_gifts = s.statements.gifts_and_bequests[i] + s.statements.gift_aid[i]
-    c.rent_only_cover.append(
-        (s.statements.operating_surplus[i] - all_gifts) / financing
+        # Rent-only cover: strip out every gift, cash included. This asks the
+        # harder question -- can the portfolio service the annuity from the rent
+        # it earns, with no reliance on giving that nobody is obliged to
+        # continue?
+        c.rent_only_cover.append(
+            (s.statements.operating_surplus[i] - all_gifts) / service
+        )
+
+    c.all_in_cover.append(
+        "" if financing <= 0
+        else (s.statements.operating_surplus[i] - non_cash) / financing
     )

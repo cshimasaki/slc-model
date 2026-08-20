@@ -159,6 +159,10 @@ class CapitalState:
     cs_interest_due: list[float] = field(default_factory=_years)
     cs_interest_shortfall: list[float] = field(default_factory=_years)
     total_financing_cost: list[float] = field(default_factory=_years)
+    # Cover including the share interest the offer advertises. Not a covenant:
+    # share interest is discretionary and subordinated, so falling below 1.0 is
+    # a year the offer under-delivers, not a default.
+    all_in_cover: list = field(default_factory=_years)
     total_debt: list[float] = field(default_factory=_years)             # row 56
     ltv: list[float] = field(default_factory=_years)                    # row 57
     total_capital_employed: list[float] = field(default_factory=_years) # row 58

@@ -188,7 +188,21 @@ tontine_fund:
 community_shares:
   # Junior debt. Withdrawable after a restriction period, capped as a share of
   # total capital, and paying a dividend only out of available surplus.
-  cs_dividend_rate: 0.03         # Default dividend rate (% p.a.)
+  # The rate the offer document ADVERTISES. Under the Co-operative and Community
+  # Benefit Societies Act 2014 this is a ceiling, not a promise: it must be the
+  # minimum necessary to attract and retain the capital, profits cannot be
+  # distributed on share capital, and payment is at the board's discretion.
+  # Societies routinely pay nothing for the first few years and step up once the
+  # project is cash-generative. The model pays it only where surplus allows, and
+  # records the gap in cs_interest_shortfall.
+  cs_dividend_rate: 0.03         # Advertised interest rate, capped (% p.a.)
+
+  # Pay share interest only after the reserve has been topped up, not merely
+  # after the annuity interest. This is what makes "interest eats the project"
+  # structurally impossible rather than just unlikely: shareholders are paid
+  # from money that has already passed every other claim, including the buffer
+  # the annuity itself depends on.
+  cs_interest_after_reserve: true
   cs_max_pct_capital: 0.20       # Maximum issuance cap (% of total capital)
   # Withdrawal restriction period. The workbook had 5; the actual share offer
   # terms are 2, corrected Aug 2026.
