@@ -614,7 +614,8 @@ def _what_if(wb: Workbook, result: ModelRun,
     ws = wb.create_sheet("What-if", 2)
     row = _title(ws, "What-if \u2014 one house, steady state",
                  "The only sheet with live formulas. Edit the blue cells and everything below "
-                 "recalculates. Per-house economics only: it says nothing about growth or time.", 4)
+                 "recalculates. ONE house of a single type \u2014 not the blended portfolio \u2014 and "
+                 "no sense of time: it says nothing about growth, the ramp or mortality.", 4)
 
     def head(text, r):
         ws.cell(row=r, column=1, value=text).font = Font(name=FONT, bold=True, size=10)
@@ -638,9 +639,10 @@ def _what_if(wb: Workbook, result: ModelRun,
     price = float(st["price"]) if st else float(a.avg_price)
     rent_pcm = float(st["rent_pcm"]) if st else a.avg_price * a.gross_yield / 12
 
-    row = head("INPUTS \u2014 edit these", row)
+    label = st["name"] if st else "average house"
+    row = head("INPUTS \u2014 edit these  (priced on: %s)" % label, row)
     r_price = row;  row = field(row, "House price", price, FMT_MONEY,
-                                "the biggest lever on this page")
+                                "one %s, not the portfolio average" % label)
     r_rent = row;   row = field(row, "Rent per month", rent_pcm, FMT_MONEY,
                                 "below market \u2014 a commitment, not a dial")
     r_fees = row;   row = field(row, "Fees and retrofit on purchase",

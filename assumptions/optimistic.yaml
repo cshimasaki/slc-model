@@ -29,7 +29,12 @@ macro_indexation:
   hpi_premium: 0.02
 
 tontine_fund:
-  pf_ltv_limit: 0.75         # was 0.70 — lenders allow more gearing
+
+  # was Base + 5 points, written as a literal 0.75 back when Base was 70%.
+  # Base moved to 45% in August 2026 and this quietly became Base + 30, which
+  # is not 'lenders allow a little more gearing', it is a different scenario.
+  # Restored to the intent: a modest step above Base, not a leap.
+  pf_ltv_limit: 0.50         # Base + 5 points — lenders allow more gearing
   pf_refi_rate: 0.045        # was 0.055 — cheaper commercial debt
 
 community_shares:
