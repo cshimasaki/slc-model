@@ -364,7 +364,13 @@ rent_yield:
   # lc_share is now DERIVED from the three lines above (1 minus the cost share)
   # and varies by year. The frozen port-reference assumptions still carry a flat
   # lc_share: 0.80, which is what reproduces the workbook.
-  void_rate: 0.05                # Void rate (%)
+
+  # 5% is the CEILING, not the expectation. A long waiting list of
+  # pre-selected tenants and security of tenure mean re-lets happen almost
+  # immediately -- the void is the week the keys change hands, not a search
+  # for a tenant. The workbook's 5% everywhere was a private-landlord figure
+  # borrowed without asking whether it described this organisation.
+  void_rate: 0.03                # Void rate (%)
 
 stock_mix:
   # WHAT WE BUY. The largest single lever in the model, and not a financing one.
@@ -417,7 +423,18 @@ acquisition:
   sdlt_rate: 0.0                 # SDLT rate — 0 assumes charitable relief (% of price)
   conveyancing: 2500             # Conveyancing per property, real (£)
   survey_cost: 800               # Survey per property, real (£)
-  retrofit_cost: 5000            # Initial retrofit per property, real (£)
+
+  # Raised from GBP 5,000. Stock is chosen for decent condition so ongoing
+  # works are light, but bringing a house to a good standard on ACQUISITION
+  # is a real cost -- insulation, heating, ventilation -- and GBP 5,000 does
+  # not do it. This is the one place the model should be generous, because
+  # under-spending here shows up later as maintenance and as tenants paying
+  # to heat a leaky house.
+  #
+  # JUDGEMENT, NOT A QUOTE. Wants replacing with real figures from whoever
+  # will do the work. It moves the all-in cost per house directly, so it is
+  # worth getting right before this drives any decision.
+  retrofit_cost: 12000           # Initial retrofit per property (real)
 
 admin_costs_early:
   # Costs in the earliest years, before the organisation reaches target scale.

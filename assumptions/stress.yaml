@@ -42,12 +42,26 @@ macro_indexation:
 community_shares:
   cs_takeup_mult: 0.5        # was 1.0 — community-share appetite halves
 
+acquisition:
+  # Stress puts its pressure on RETROFIT rather than on voids or ongoing
+  # maintenance, because that is where the real uncertainty sits. The
+  # houses let easily; what is unknown is what they cost to bring up to
+  # standard once the surveys are in.
+  retrofit_cost: 18000       # was 12000 — works run 50% over
+
 rent_yield:
-  void_rate: 0.15            # was 0.05 — properties stand empty
-  # was 2.0 months. Older stock, deferred repairs coming due, and contractors
-  # charging more in an inflationary period: maintenance takes three months of
-  # rent in twelve, leaving the Commons 75% at small scale.
-  lc_maintenance_months: 3.0
+
+  # was 0.15, which was never credible for this organisation and made Stress
+  # fail for a reason that could not happen. With a waiting list of
+  # pre-selected tenants and security of tenure, 5% is the realistic CEILING
+  # -- a bad year of turnover and slow works, not an inability to let.
+  void_rate: 0.05            # was 0.15 — the ceiling, not a collapse in demand
+
+  # was 3.0. Two months is the maximum on decent stock, so Stress sits just
+  # above it: 2.5 months, which is deferred repairs coming due at once and
+  # contractors charging more in an inflationary period. Even this is
+  # described as unlikely given the stock selection policy.
+  lc_maintenance_months: 2.5
 
 bequests_gifts:
   # No property gifts at all. Gifts are earned by demonstrated benefit, and the

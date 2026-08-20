@@ -35,7 +35,12 @@ def test_scenario_loads(scenario):
 def test_deltas_apply_over_base():
     base, stress = load("base"), load("stress")
     # Stress overrides these...
-    assert base.void_rate == 0.05 and stress.void_rate == 0.15
+    # Voids are low by design, not by optimism: a waiting list of pre-selected
+    # tenants and security of tenure mean a re-let is the week the keys change
+    # hands. 5% is the ceiling even in Stress, where the pressure is put on
+    # retrofit cost instead -- that is where the genuine uncertainty is.
+    assert base.void_rate == 0.03 and stress.void_rate == 0.05
+    assert stress.retrofit_cost > base.retrofit_cost
     assert base.cpi_general == 0.029 and stress.cpi_general == 0.045
     assert base.hpi_shock_year == 0 and stress.hpi_shock_year == 5
     # Stress reverses the sign of the house-price premium: Base has houses

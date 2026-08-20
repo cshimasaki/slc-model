@@ -58,7 +58,8 @@ rent_yield:
   # contractor rates, fewer emergency call-outs, planned rather than reactive.
   # 1.6 months leaves the Commons 86.7% of gross rent at small scale.
   lc_maintenance_months: 1.6
-  void_rate: 0.03            # was 0.05
+
+  void_rate: 0.02            # was 0.03 — re-lets are effectively same-week
 
 operating_efficiency:
   # The service company matures faster and negotiates harder.
