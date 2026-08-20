@@ -1,0 +1,457 @@
+<title>Rebuilding the SLC Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --ground:      #f6f8f6;
+    --surface:     #ffffff;
+    --sunk:        #eef2ef;
+    --ink:         #16211c;
+    --ink-2:       #4c5b54;
+    --ink-3:       #7a8a82;
+    --rule:        #dce3de;
+    --accent:      #2f5d50;
+    --accent-soft: #e4ede9;
+    --correct:     #96442e;
+    --correct-soft:#f6e9e4;
+    --good:        #2f6d4f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #121816;
+      --surface:     #18201d;
+      --sunk:        #1e2724;
+      --ink:         #e9efeb;
+      --ink-2:       #a9b8b1;
+      --ink-3:       #7b8b84;
+      --rule:        #2b3733;
+      --accent:      #78b3a0;
+      --accent-soft: #1d2f29;
+      --correct:     #d3866c;
+      --correct-soft:#2e211c;
+      --good:        #6fb28b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:      #121816;
+    --surface:     #18201d;
+    --sunk:        #1e2724;
+    --ink:         #e9efeb;
+    --ink-2:       #a9b8b1;
+    --ink-3:       #7b8b84;
+    --rule:        #2b3733;
+    --accent:      #78b3a0;
+    --accent-soft: #1d2f29;
+    --correct:     #d3866c;
+    --correct-soft:#2e211c;
+    --good:        #6fb28b;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    font-size: 16.5px;
+    line-height: 1.62;
+    margin: 0;
+    padding: 0 1.5rem 6rem;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 47rem; margin: 0 auto; }
+
+  /* ---------- masthead ---------- */
+  header.masthead {
+    padding: 4.5rem 0 2rem;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 3rem;
+  }
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 1.25rem;
+  }
+  h1 {
+    font-family: Spectral, Georgia, serif;
+    font-weight: 600;
+    font-size: clamp(2.2rem, 5.5vw, 3.1rem);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    margin: 0 0 1rem;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-family: Spectral, Georgia, serif;
+    font-size: 1.18rem;
+    line-height: 1.55;
+    color: var(--ink-2);
+    margin: 0 0 1.75rem;
+    max-width: 38rem;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.75rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--ink-3);
+  }
+  .meta b { color: var(--ink-2); font-weight: 500; }
+
+  /* ---------- sections ---------- */
+  section { margin: 0 0 3.5rem; }
+  h2 {
+    font-family: Spectral, Georgia, serif;
+    font-weight: 600;
+    font-size: 1.62rem;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.4rem;
+    text-wrap: balance;
+  }
+  h2 .num {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  h3 {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 2rem 0 0.35rem;
+    letter-spacing: -0.005em;
+  }
+  .lede { color: var(--ink-2); margin: 0 0 1.5rem; max-width: 40rem; }
+  p { margin: 0 0 1rem; max-width: 40rem; }
+  a { color: var(--accent); }
+
+  /* ---------- headline figures ---------- */
+  .figures {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin: 0 0 1.25rem;
+  }
+  .fig { background: var(--surface); padding: 1.1rem 1.15rem 1rem; }
+  .fig .k {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .fig .v {
+    font-family: Spectral, Georgia, serif;
+    font-size: 1.85rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    display: block;
+  }
+  .fig .s { font-size: 0.78rem; color: var(--ink-3); display: block; margin-top: 0.4rem; }
+
+  /* ---------- tables ---------- */
+  .scroll { overflow-x: auto; margin: 0 0 1.25rem; border: 1px solid var(--rule); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.87rem; min-width: 30rem; }
+  th, td {
+    text-align: right;
+    padding: 0.58rem 0.85rem;
+    border-bottom: 1px solid var(--rule);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  th:first-child, td:first-child { text-align: left; white-space: normal; }
+  thead th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 500;
+    border-bottom: 1.5px solid var(--ink-2);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.pos { color: var(--good); }
+  .caption { font-size: 0.79rem; color: var(--ink-3); margin: -0.6rem 0 1.5rem; max-width: 40rem; }
+
+  /* ---------- change entries ---------- */
+  .change {
+    border-left: 2px solid var(--rule);
+    padding: 0 0 0 1.25rem;
+    margin: 0 0 1.75rem;
+  }
+  .change.material { border-left-color: var(--accent); }
+  .change h3 { margin-top: 0; }
+  .change p { margin-bottom: 0.5rem; }
+  .swap {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.79rem;
+    color: var(--ink-2);
+    background: var(--sunk);
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    margin: 0.15rem 0.3rem 0.15rem 0;
+    border-radius: 2px;
+  }
+  .swap b { color: var(--ink); font-weight: 500; }
+
+  /* ---------- corrections ---------- */
+  .correction {
+    background: var(--correct-soft);
+    border-left: 2px solid var(--correct);
+    padding: 1rem 1.15rem;
+    margin: 0 0 1rem;
+  }
+  .correction h3 { margin: 0 0 0.3rem; color: var(--correct); font-size: 0.95rem; }
+  .correction p { margin: 0; font-size: 0.9rem; color: var(--ink-2); max-width: none; }
+
+  /* ---------- callout ---------- */
+  .callout {
+    background: var(--accent-soft);
+    padding: 1.25rem 1.4rem;
+    margin: 0 0 1.5rem;
+    border-radius: 2px;
+  }
+  .callout p { margin: 0; max-width: none; }
+  .callout strong { color: var(--accent); }
+
+  ul { margin: 0 0 1rem; padding-left: 1.15rem; max-width: 40rem; }
+  li { margin-bottom: 0.4rem; }
+  li::marker { color: var(--ink-3); }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 1.5rem;
+    margin-top: 4rem;
+    font-size: 0.82rem;
+    color: var(--ink-3);
+  }
+  footer p { max-width: 40rem; }
+  code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.86em;
+    background: var(--sunk);
+    padding: 0.1em 0.35em;
+    border-radius: 2px;
+  }
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">Stroud Land Commons · Financial model · Review note</p>
+  <h1>Rebuilding the SLC Model</h1>
+  <p class="standfirst">What changed between the V2.1 spreadsheet and the model you have now — the corrections that moved the answer, and the ones that turned out to be mistakes of our own.</p>
+  <div class="meta">
+    <span><b>Prepared</b> 20 August 2026</span>
+    <span><b>Validation</b> 13,150 cells, exact</span>
+    <span><b>Horizon</b> 50 years, three scenarios</span>
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">Where it stands</span>Every scenario now clears every covenant</h2>
+  <p class="lede">This is the first configuration for which that has been true. It is worth saying plainly that it was not true three months ago, and that most of the distance was closed by finding errors rather than by choosing more favourable assumptions.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Scenario</th><th>Properties</th><th>Net assets</th><th>Senior cover</th><th>Breach years</th><th>Rent-only</th><th>Share delivery</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Base</td><td>185</td><td>£111m</td><td>2.10×</td><td class="pos">0</td><td>3.01×</td><td>98%</td></tr>
+        <tr><td>Optimistic</td><td>258</td><td>£461m</td><td>2.63×</td><td class="pos">0</td><td>6.71×</td><td>100%</td></tr>
+        <tr><td>Stress</td><td>125</td><td>£274m</td><td>1.52×</td><td class="pos">0</td><td>2.44×</td><td>97%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="caption"><b>Senior cover</b> asks whether rent services the annuity — the covenant that protects the Tontine investor. <b>Rent-only</b> strips out every gift, measured at year 20. <b>Share delivery</b> is the proportion of advertised share interest actually paid over fifty years.</p>
+
+  <div class="callout">
+    <p><strong>The pricing gap has reversed.</strong> In May the highest coupon a severe stress could carry was 3.77%, against 4.58% needed for an investor to recover their capital by median survival — an 81 basis point gap with no rate satisfying both. Stress now carries <b>6.06%</b>. The gap is <b>+148bp in the Commons' favour</b>, and the modelled rate of 4.75% sits comfortably inside it.</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">The port</span>From spreadsheet to code, number for number</h2>
+  <p>The V2.1 workbook was reimplemented in Python with the parameters separated from the mechanics, then checked cell by cell against the original: <b>13,150 values across three scenarios, matching exactly</b>, including Excel's own rounding conventions and the prior-year lags the sheet used to avoid circular references.</p>
+  <p>That fidelity is deliberately preserved. A frozen copy of the port-time assumptions still reproduces the workbook, so every subsequent change can be shown to be a decision rather than a translation error. The validation runs on every commit.</p>
+  <p>Two habits came out of that stage and have earned their place since. A negative control proves the checker actually fails when it should — introducing a 0.1% drift produces 2,676 mismatches. And every structural change goes on its own branch with a written record of what was hypothesised, what the numbers said, and whether it was adopted.</p>
+</section>
+
+<section>
+  <h2><span class="num">First wave</span>Corrections that changed the answer</h2>
+  <p class="lede">These emerged from reading the workbook's mechanics against what the instrument is actually supposed to do. Three of them changed the model's conclusions materially.</p>
+
+  <div class="change material">
+    <h3>The coupon was charging inflation twice</h3>
+    <p>The sheet applied CPI plus the spread to a principal that had <em>already</em> been uplifted by CPI that year. The investor received inflation twice.</p>
+    <p><span class="swap">investor's real return <b>5.0% → 2.5%</b></span><span class="swap">SLC's interest cost overstated by <b>95%</b></span></p>
+    <p>This is the single largest correction in the project. It had been hiding in plain sight since the workbook was written, because the formula looks correct until you notice which row it is pointing at.</p>
+  </div>
+
+  <div class="change material">
+    <h3>The Tontine now runs on mortality, not on a schedule</h3>
+    <p>The workbook released a flat 6% of the balance each year from year 25 — a parametric stand-in, not a mechanism. The instrument is a lifetime annuity: the coupon stops and the charge is extinguished when the investor dies, and no principal is ever repaid.</p>
+    <p>Rebuilt on cohort survivorship from an actuarial run-off curve, with a five-year lock-up. The rule cannot fully discharge while any annuitant survives, and that floor is structural rather than a threshold someone could set wrongly.</p>
+  </div>
+
+  <div class="change material">
+    <h3>One DSCR became three interest cover tests</h3>
+    <p>Debt service cover is the wrong instrument here: no principal is ever repaid, so the denominator was measuring something that does not happen. It is replaced by cover on cash income excluding donated property, cover on rent alone with no gifts at all, and the original ratio kept for comparison.</p>
+  </div>
+
+  <div class="change">
+    <h3>Scale economies, property gifts, and the share withdrawal term</h3>
+    <p>Per-property running costs now fall on a learning curve as the estate grows. Properties given outright are modelled, including the heavier retrofit that gifted stock tends to need. The community share withdrawal restriction was corrected from five years to two, matching the actual offer terms.</p>
+  </div>
+
+  <div class="change material">
+    <h3>The investor rate, and the question it exposed</h3>
+    <p>Moved from 3.0% to 2.5% to <b>4.75%</b>. At 2.5% an investor recovers about 55% of their capital over their expected life and never breaks even — philanthropy with a yield, not a bet on longevity, and not something that raises money against a commercial annuity.</p>
+    <p><span class="swap">recovery by age 87 <b>55% → 104%</b></span></p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">Second wave</span>Costs became what they are, not what a percentage said</h2>
+  <p class="lede">The first wave fixed mechanics. The second replaced assumptions the workbook had asserted with figures that can be defended — and in three places the assumption turned out to be describing a different organisation entirely.</p>
+
+  <div class="change material">
+    <h3>What the Commons buys is the largest lever in the model</h3>
+    <p>The workbook carried one average house. But rent tracks <em>bedrooms</em> while price tracks <em>property type</em>, and they come apart: in Stroud a three-bed terrace and a three-bed semi both let for £1,176 a month, and the semi costs £55,000 more.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Acquisition policy</th><th>Yield</th><th>Properties</th><th>Senior cover</th></tr></thead>
+        <tbody>
+          <tr><td>All two-bed flats</td><td>6.94%</td><td>203</td><td>3.65×</td></tr>
+          <tr><td>All three-bed terraces</td><td>4.92%</td><td>188</td><td>2.22×</td></tr>
+          <tr><td>All three-bed semis</td><td>4.13%</td><td>160</td><td>1.90×</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">Identical finances, identical rent policy — only the stock differs. A 27% spread on portfolio size and 92% on cover, wider than moving the LTV limit from 70% to 30%. The flats row is not a recommendation: a commons that houses nobody with children has not done the job, and leasehold costs are not modelled.</p>
+  </div>
+
+  <div class="change material">
+    <h3>The fund's costs are a person, not a percentage</h3>
+    <p>A flat 0.50% margin on the fund yields £20,000 on a £4m fund — which does not pay for an actuarial valuation — and £1m on a £200m fund for the same job. It is now a staffed cost: part-time and pro-rata at the start, growing with the amount actually raised, and charged as an operating cost rather than buried in the coupon, so it reduces the surplus visibly.</p>
+  </div>
+
+  <div class="change material">
+    <h3>Community shares now behave as the 2014 Act defines them</h3>
+    <p>An advertised rate on withdrawable share capital is a <em>ceiling paid at the board's discretion</em>, not a promise. Cover is therefore reported two ways: <b>senior</b>, asking whether rent services the annuity, and <b>all-in</b>, asking whether it also pays what the share offer advertises. Share interest is subordinated to the reserve as well as to the annuity.</p>
+    <p>The consequence is deliberate and should be stated to prospective shareholders: under Stress the offer delivers 97% of what it advertises. Shareholders wait so that annuitants never do.</p>
+  </div>
+
+  <div class="change">
+    <h3>Maintenance, admin, and a cost counted twice</h3>
+    <p>The flat 80% share of rent became two months in twelve — the trade convention — falling with scale as procurement leverage builds. Separately, per-property admin and maintenance were being charged <em>on top of</em> that share, counting roughly £850 per house per year twice.</p>
+    <p><span class="swap">Commons' share of rent <b>80% → 83.3%</b>, rising to 89% at scale</span></p>
+  </div>
+
+  <div class="change">
+    <h3>Indexation became a choice</h3>
+    <p>The Tontine principal can be indexed to rent, CPI or house prices. Rent is the default: once a house enters the Commons it is never sold, so its market price is a number that never gets tested, while rent is the only cash it produces. Indexing the liability to rent means it cannot drift away from the income backing it.</p>
+  </div>
+
+  <div class="change">
+    <h3>Macro figures, voids and retrofit</h3>
+    <p>Base now carries the published position — CPI 2.9%, private rent 3.7%, house prices 2.0% (ONS, mid-2026). Note the sign: the workbook assumed houses outrun rents by a point; they are currently growing a point and a half <em>slower</em>.</p>
+    <p>Void rates were a private landlord's numbers. With a waiting list of pre-selected tenants and security of tenure, a re-let is the week the keys change hands. Stress was failing partly for a reason that cannot happen.</p>
+    <p><span class="swap">Stress voids <b>15% → 5%</b></span><span class="swap">retrofit on purchase <b>£5,000 → £12,000</b></span></p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">Under scrutiny</span>What we got wrong, and caught</h2>
+  <p class="lede">A reviewer should know where the model has been wrong, not only where it is now right. Each of these was found by checking a result that looked convincing.</p>
+
+  <div class="correction">
+    <h3>A yield of 3.57% that did not exist</h3>
+    <p>Dividing Stroud's average rent by its average house price gives 3.57% and suggests the whole model is unfinanceable. Those are different populations — the sale average includes £563,000 detached houses that never reach the rental market. Matched by stock type the yield on lettable property is 4.0–4.9%, so the workbook's original 5.0% was close to right.</p>
+  </div>
+
+  <div class="correction">
+    <h3>Share interest treated as a contractual charge</h3>
+    <p>An intermediate version made share interest a hard obligation and concluded that Stress failed. That was wrong about the instrument: interest on withdrawable share capital in a community benefit society is discretionary by law.</p>
+  </div>
+
+  <div class="correction">
+    <h3>A diagnosis that did not survive testing</h3>
+    <p>We hypothesised that a divergence between CPI and rent was the dominant cause of covenant failure over long horizons. Correcting the indexation basis moved breaches from 13 to 11 — not to zero. The real cause was marginal cover on a debt-funded house, which is a ratio rather than an indexation artefact. The change was kept because it is right; the explanation attached to it was not.</p>
+  </div>
+
+  <div class="correction">
+    <h3>A funding mix presented as a finding</h3>
+    <p>An early split of 17% Tontine, 56% shares and 27% gifts was reported as a result. It was an artefact of three unrelated inherited parameters colliding, and nobody had chosen it. The mix is now a declared input whose weights are labelled as judgement, not evidence.</p>
+  </div>
+
+  <div class="correction">
+    <h3>A frontier that had gone stale by 150 basis points</h3>
+    <p>The coupon ceilings were typed into the reviewer sheet as literals and quietly overtaken by almost every subsequent change. They are now computed at export. Similarly, a scenario's gearing limit was written as "0.75" when that meant Base plus five points; when Base moved to 45%, it silently became Base plus thirty.</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">The configuration</span>Four numbers, chosen together</h2>
+  <p class="lede">These interact, and moving one without the others generally makes things worse. The reasoning is recorded in the assumptions file itself so it travels with the parameters.</p>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Parameter</th><th>Value</th><th>Why not otherwise</th></tr></thead>
+      <tbody>
+        <tr><td>Investor rate</td><td>4.75%</td><td style="text-align:left;white-space:normal">4.25% returns only ~93% of capital by median survival</td></tr>
+        <tr><td>LTV limit</td><td>45%</td><td style="text-align:left;white-space:normal">Costs ~2% of the portfolio, buys 30 points of cover</td></tr>
+        <tr><td>Share rate advertised</td><td>5.00%</td><td style="text-align:left;white-space:normal">3% is +0.10% real; par-value shares have no other protection</td></tr>
+        <tr><td>Shares, % of purchases</td><td>45%</td><td style="text-align:left;white-space:normal">A symbolic tranche makes Stress worse, not better</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>What the balance sheet does over time</h3>
+  <p>The most consequential thing the model has to say is not a single figure but a shape: the Tontine extinguishes with its investors while free capital accumulates. Permanent capital is more expensive than mortal capital over fifty years, and this is where that shows.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Share of capital employed</th><th>Year 10</th><th>Year 30</th><th>Year 50</th></tr></thead>
+      <tbody>
+        <tr><td>Tontine charge</td><td>43%</td><td>8%</td><td>0%</td></tr>
+        <tr><td>Community shares</td><td>41%</td><td>47%</td><td>29%</td></tr>
+        <tr><td>Reserves and gifts</td><td>15%</td><td>45%</td><td>71%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">Open</span>What the model still cannot tell you</h2>
+  <p class="lede">Listed so they are not discovered as surprises. None of these is a defect; each is a limit on what should be concluded.</p>
+  <ul>
+    <li><b>Retrofit cost is judgement, not a quote.</b> £12,000 in Base and £18,000 in Stress. It moves the all-in cost per house directly and should be replaced with real figures before it drives a decision.</li>
+    <li><b>The mortality basis is population, not annuitant.</b> It therefore understates longevity. The September actuarial dataset replaces a single input file, and everything here should be rerun against it.</li>
+    <li><b>The Tontine only raises £3–4m.</b> It draws whatever acquisitions still need after gifts and shares, so its size reflects its position in the funding queue rather than investor appetite. Below roughly £20m it is not economic as a separately regulated fund — the administration is a material share of rental income at that size.</li>
+    <li><b>All-in cover falls below 1.0 under Stress.</b> This is the share offer under-delivering, not a default, and it is the subordination working as intended. It is the figure most likely to prompt a question.</li>
+    <li><b>The investment phase stays at ten years.</b> Extending it needs a covenant sized on income rather than on property value, which is designed but not built.</li>
+    <li><b>Rent stays below market as a commitment, never as a lever.</b> A 25% discount passes every covenant — but it is a transfer, paid for by roughly forty fewer houses by year 50 and by share investors receiving less. It is not free money released by declining to take a profit.</li>
+  </ul>
+</section>
+
+<footer>
+  <p>Model, assumptions, validation harness and decision log are version-controlled. Every structural change carries a written record of what was hypothesised, what the three scenarios produced, and whether it was adopted or parked. The accompanying workbook holds all three scenarios: <b>For Review</b> first, then the comparison and assumptions, then fifty years of statements per scenario. The <b>What-if</b> sheets are live — editing the blue cells recalculates the per-house economics that govern the four decisions above.</p>
+</footer>
+
+</div>
