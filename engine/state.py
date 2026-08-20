@@ -35,6 +35,9 @@ class GrowthState:
     admin_fca: list[float] = field(default_factory=_years)              # row 17
     admin_insurance: list[float] = field(default_factory=_years)        # row 18
     admin_variable: list[float] = field(default_factory=_years)         # row 19
+    # Cost of running the Tontine fund: administrator, actuarial, audit. No
+    # workbook row -- the sheet carried this as a margin on the coupon instead.
+    admin_fund: list[float] = field(default_factory=_years)
     admin_total: list[float] = field(default_factory=_years)            # row 20
     unit_acquisition_cost: list[float] = field(default_factory=_years)  # row 23
     funding_capacity: list[float] = field(default_factory=_years)       # row 24
@@ -68,6 +71,10 @@ class AssetState:
     revaluation_gain: list[float] = field(default_factory=_years)       # row 63
     gross_rent: list[float] = field(default_factory=_years)             # row 117
     net_rental_income: list[float] = field(default_factory=_years)      # row 119
+    # The Commons' share of gross rent actually applied this year. Derived from
+    # maintenance cost per house and portfolio scale, so it rises over time.
+    # No workbook row: the sheet held this constant.
+    lc_share_effective: list[float] = field(default_factory=_years)
     purchase_price: list[float] = field(default_factory=_years)         # row 122
     sdlt: list[float] = field(default_factory=_years)                   # row 123
     conveyancing: list[float] = field(default_factory=_years)           # row 124

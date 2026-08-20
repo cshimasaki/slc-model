@@ -172,9 +172,22 @@ def tontine(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
 
     c.tf_opening.append(prior(c.tf_closing, i))                          # row 30
 
-    # Row 31: CPI uplift on the principal. A P&L charge, but non-cash -- it is
-    # added to the balance owed rather than paid out.
-    c.tf_indexation.append(c.tf_opening[i] * m.cpi_rate[i])
+    # Row 31: uplift on the principal. A P&L charge, but non-cash -- it is added
+    # to the balance owed rather than paid out.
+    #
+    # What it is indexed to is a choice, and the three options have genuinely
+    # different consequences (see pf_index_basis in base.yaml). "rent" is the
+    # default: the charge is secured on houses that are never sold, so rent is
+    # the only cash the security ever produces, and indexing the liability to it
+    # means cover cannot drift apart from the thing paying it. "cpi" is what the
+    # workbook did. "hpi" tracks capital value, which an organisation that never
+    # sells never realises.
+    index_rate = {
+        "rent": m.rent_rate,
+        "hpi": m.hpi_rate,
+        "cpi": m.cpi_rate,
+    }[getattr(a, "pf_index_basis", "cpi")][i]
+    c.tf_indexation.append(c.tf_opening[i] * index_rate)
     c.tf_indexed_opening.append(c.tf_opening[i] + c.tf_indexation[i])    # row 32
 
     c.tf_cum_raised_opening.append(prior(c.tf_cum_raised_closing, i))    # row 33
@@ -246,10 +259,18 @@ def tontine(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
     mode = getattr(a, "pf_release_mode", "geometric")
 
     if mode == "survivorship":
+        # The cohort balances must be uplifted on the SAME basis as row 31,
+        # or the charge computed here and the indexation charged there drift
+        # apart and the balance sheet stops tying out.
+        basis_index = {
+            "rent": m.rent_index,
+            "hpi": m.hpi_index,
+            "cpi": m.cpi_index,
+        }[getattr(a, "pf_index_basis", "cpi")]
         closing = tontine_runoff.outstanding_charge(
             curve=runoff_curve,
             drawdowns=c.tf_drawdown,
-            cpi_index=m.cpi_index,
+            cpi_index=basis_index,
             year_index=i,
             lockup_years=getattr(a, "pf_lockup_years", 5),
             gain_to_commons=getattr(a, "pf_mortality_gain_to_commons", 1.0),

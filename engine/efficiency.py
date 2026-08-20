@@ -71,3 +71,35 @@ def factor_for(a, portfolio: float) -> float:
         getattr(a, "opex_learning_rate", 1.0),
         getattr(a, "opex_efficiency_floor", 1.0),
     )
+
+
+def commons_rent_share(a, portfolio: float) -> float:
+    """
+    The share of gross rent the Commons keeps, at a given portfolio size.
+
+    The workbook held this at a flat 80%. Two corrections are folded in here.
+
+    The level: maintenance and the other running costs of a house are
+    conventionally about two months of rent in twelve, which is 16.67% and
+    leaves 83.33% -- not the 20%/80% the sheet assumed.
+
+    The slope: that cost share falls as the estate grows, for the same
+    procurement reasons per-property admin does, so the Commons keeps a little
+    more of each pound as it scales. Same learning curve, its own rate and
+    floor, because maintenance has less headroom than administration -- you can
+    batch a gas safety round, but the roof still needs somebody on it.
+
+    Falls back to the flat `lc_share` when the newer parameters are absent,
+    which is what keeps the frozen port-reference assumptions reproducing the
+    workbook exactly.
+    """
+    months = getattr(a, "lc_maintenance_months", None)
+    if months is None:
+        return a.lc_share
+
+    cost_share = (months / 12.0) * scale_factor(
+        portfolio,
+        getattr(a, "lc_cost_learning_rate", 1.0),
+        getattr(a, "lc_cost_floor", 1.0),
+    )
+    return 1.0 - cost_share

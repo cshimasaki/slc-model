@@ -20,17 +20,40 @@
 # =============================================================================
 
 macro_indexation:
-  cpi_general: 0.025         # General CPI inflation (% p.a.)
-  rent_inflation: 0.025      # Rent inflation (% p.a.)
-  hpi_premium: 0.01          # HPI premium over CPI (% p.a.)
+  # Set to the published UK position, August 2026, rather than the long-run
+  # averages the workbook carried.
+  #
+  #   CPI          2.9%  (12 months to July 2026, ONS)
+  #   Private rent 3.7%  (12 months to July 2026, ONS)
+  #   House prices 2.0%  (12 months to June 2026, ONS)
+  #
+  # The workbook assumed rent = CPI and houses = CPI + 1.0%. Both are currently
+  # wrong, and the second is wrong in sign: rents are outgrowing house prices by
+  # 170bp, where the model had houses ahead by 100bp. That 270bp swing matters
+  # more than any other parameter here, because it decides whether a debt limit
+  # set against property VALUE stays affordable out of RENT.
+  #
+  # Health warning: these are single-year prints, not fifty-year assumptions.
+  # Held flat for fifty years, hpi_premium of -0.9% means real house prices fall
+  # to about 0.64 of today's by year 50. For an organisation that never sells
+  # that is survivable and arguably helpful -- cheaper to buy, and the asset
+  # value only matters for gearing headroom -- but it is a strong claim and it
+  # is not what the last thirty years did. Treat Base as "the present continues"
+  # and use the scenarios for the alternatives.
+  cpi_general: 0.029         # General CPI inflation (% p.a.)
+  rent_inflation: 0.037      # Rent inflation (% p.a.)
+  hpi_premium: -0.009        # HPI premium over CPI (% p.a.) — negative: houses
+                             # are currently growing slower than prices generally
   base_calendar_year: 2026   # Calendar year that model Year 1 represents
 
 tontine_fund:
   # Closed-end lifetime annuity mutual. Interest-only and index-linked: the
-  # principal is uplifted by CPI each year rather than amortised, and from
+  # principal is uplifted each year rather than amortised, and from
   # pf_release_start_yr a slice of the balance is released to SLC reserves each
   # year as a non-cash credit (a parametric proxy for annuitant survivorship).
-  pf_index_label: CPI            # Indexation basis for principal and coupon
+  pf_index_label: Rent           # Display label only. The behaviour is set by
+                                 # pf_index_basis below; this is the workbook's
+                                 # text field and is kept in step with it.
   # CPI + 4.25%. Raised from 2.5% in August 2026 after modelling what the
   # investor actually receives.
   #
@@ -70,8 +93,54 @@ tontine_fund:
   #            doubles the investor's real return -- 5.0% instead of 2.5%.
   # See MODEL_LOG: this was an error inherited from the spreadsheet.
   pf_coupon_basis: real
-  pf_fund_op_margin: 0.005       # Fund operating cost margin (% p.a.)
-  pf_fund_reg_charge: 0.0025     # Fund regulatory capital charge (% p.a.)
+
+  # What the Tontine principal is indexed to.
+  #
+  #   rent  the local rent the properties actually earn. The default, and the
+  #         one that matches what the charge is secured on: once a house enters
+  #         the Commons it is never sold, so its market price is a number that
+  #         never gets tested, while its rent is the only cash that exists.
+  #         Indexing to rent means the liability and the income backing it move
+  #         together, and cover cannot drift because the two grew apart.
+  #   cpi   general consumer prices. Protects the investor's spending power
+  #         rather than tracking the asset, and is what the workbook did.
+  #   hpi   house prices. Tracks the asset's capital value, which for an
+  #         organisation that never sells is the least meaningful of the three.
+  #
+  # This is a genuine choice with different winners, not a technicality. In a
+  # period when house prices outrun rents, CPI or HPI indexation transmits that
+  # gap into the liability, and the only ways back to covenant are higher rent
+  # or slower growth. Rent indexation cannot do that by construction.
+  pf_index_basis: rent
+
+  # Fund running costs.
+  #
+  # Previously a flat 0.50% margin on the fund. That is wrong at both ends: on a
+  # GBP 4m fund it yields GBP 20,000, which does not pay for an actuarial
+  # valuation, and on a GBP 200m fund it yields GBP 1m for the same function.
+  # The cost is mostly a person, not a percentage.
+  #
+  # Modelled instead as a staffed cost that ramps: part-time and pro-rata at the
+  # start, growing to a full role with bought-in actuarial and audit as the fund
+  # becomes material. Board and trustees are assumed voluntary or on small
+  # honoraria, so they are not a salary line here.
+  #
+  # It is charged as an operating cost of the Commons, NOT added to the coupon.
+  # The investor receives pf_investor_rate; running the fund is what it costs
+  # SLC to offer the instrument, and it belongs in opex where it reduces the
+  # operating surplus and shows up honestly in cover.
+  # The ramp is driven by how much has been RAISED, not by how many years have
+  # passed. Staffing follows the work: a fund that never grows never needs the
+  # full role, and a time-based ramp would put a salary on it anyway.
+  pf_fund_admin_early: 12000     # Part-time administrator, pro-rata (real GBP p.a.)
+  pf_fund_admin_target: 55000    # Full role plus actuarial and audit (real GBP p.a.)
+  pf_fund_admin_mature_raise: 20000000   # Raise at which the full role is needed (GBP)
+  pf_fund_op_margin: 0.0         # Superseded by the staffed cost above; kept at
+                                 # zero so the derived coupon is investor + reg
+                                 # only. The workbook's 0.005 survives in the
+                                 # frozen port-reference assumptions.
+  pf_fund_reg_charge: 0.0025     # Regulatory capital charge (% p.a.) — genuinely
+                                 # proportional to the fund, so still a rate
   pf_max_raise: 50000000         # Tontine maximum raise (£)
   pf_invest_phase_yrs: 10        # Investment phase duration (years) — drawdowns only within this window
   pf_release_start_yr: 25        # Release phase start (model year)
@@ -197,8 +266,35 @@ bequests_gifts:
                                      # property chosen and bought on the market.
 
 rent_yield:
+  # Gross yield stays at 5.00%. It was briefly raised to 5.50% as a covenant
+  # lever before anyone worked out what that meant: on a GBP 280,000 house it is
+  # rent going from GBP 1,167 to GBP 1,283 a month, a 10% increase paid by
+  # tenants to make a financing ratio work. The commitment is that rent stays
+  # below market, so this dial is not available and should not be reached for.
   gross_yield: 0.05              # Gross rental yield (% of purchase price)
-  lc_share: 0.80                 # Land Commons share of gross rent (%)
+
+  # What maintenance and the other running costs of the houses absorb, stated
+  # the way the trade states it: about two months of rent out of twelve. That is
+  # 16.67%, not the 20% the workbook carried, and it leaves 83.33% to the
+  # Commons at the start.
+  #
+  # It falls with scale for the same reasons per-property admin does -- batched
+  # gas safety rounds, materials bought in bulk, contracted volume worth
+  # negotiating over. Same learning-curve form as engine/efficiency.py: a fixed
+  # proportion off for every doubling of the portfolio.
+  #
+  # The floor matters. Maintenance is not procurement leverage all the way down;
+  # somebody still has to attend the property and fix the roof. At 0.65 the cost
+  # share bottoms out around 10.8% of rent, i.e. 1.3 months -- a well-run estate
+  # at scale, not a free one.
+  lc_maintenance_months: 2.0     # Months of rent absorbed by maintenance and other
+                                 # property running costs, at small scale
+  lc_cost_learning_rate: 0.95    # Saving per doubling of the portfolio (5% off)
+  lc_cost_floor: 0.65            # Floor on that cost share, as a fraction of the
+                                 # small-scale share
+  # lc_share is now DERIVED from the three lines above (1 minus the cost share)
+  # and varies by year. The frozen port-reference assumptions still carry a flat
+  # lc_share: 0.80, which is what reproduces the workbook.
   void_rate: 0.05                # Void rate (%)
 
 acquisition:

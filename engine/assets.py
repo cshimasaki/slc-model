@@ -88,7 +88,13 @@ def totals(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
     A.gross_rent.append(sum(c[i] for c in A.cohort_rent))                # row 117
 
     # Row 119: only the Land Commons' share, and only on occupied properties.
-    A.net_rental_income.append(A.gross_rent[i] * a.lc_share * (1 - a.void_rate))
+    #
+    # The share is no longer a constant. What the houses cost to maintain is
+    # about two months of rent, falling with scale, so what the Commons keeps
+    # rises as the estate grows. See engine/efficiency.py::commons_rent_share.
+    share = efficiency.commons_rent_share(a, s.growth.portfolio_closing[i])
+    A.lc_share_effective.append(share)
+    A.net_rental_income.append(A.gross_rent[i] * share * (1 - a.void_rate))
 
 
 def acquisition_costs(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:

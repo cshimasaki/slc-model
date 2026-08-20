@@ -28,13 +28,26 @@
 # =============================================================================
 
 macro_indexation:
-  cpi_general: 0.045         # was 0.025 — high inflation on costs and Tontine principal
+  # was 0.029 — high inflation on costs, while rent inflation is held down to
+  # base (3.7%) rather than following it. That 80bp real squeeze on rents is
+  # the heart of this scenario: costs run away and the income does not follow.
+  cpi_general: 0.045
+  # was -0.009 — house prices track CPI plus a point, so the ASSET inflates at
+  # 5.5% while the RENT that services the charge grows at 3.7%. Under an LTV
+  # limit that gap is what quietly destroys cover, because the borrowing limit
+  # is set against value and the covenant is tested against rent. It is also
+  # exactly what pf_index_basis: rent is there to neutralise.
+  hpi_premium: 0.01
 
 community_shares:
   cs_takeup_mult: 0.5        # was 1.0 — community-share appetite halves
 
 rent_yield:
   void_rate: 0.15            # was 0.05 — properties stand empty
+  # was 2.0 months. Older stock, deferred repairs coming due, and contractors
+  # charging more in an inflationary period: maintenance takes three months of
+  # rent in twelve, leaving the Commons 75% at small scale.
+  lc_maintenance_months: 3.0
 
 bequests_gifts:
   # No property gifts at all. Gifts are earned by demonstrated benefit, and the

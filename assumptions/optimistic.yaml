@@ -17,9 +17,16 @@
 # =============================================================================
 
 macro_indexation:
-  cpi_general: 0.02          # was 0.025 — lower general inflation
-  rent_inflation: 0.03       # was 0.025 — rents outpace CPI
-  hpi_premium: 0.02          # was 0.01 — house prices outpace CPI by more
+  cpi_general: 0.02          # was 0.029 — inflation settles back below target
+  rent_inflation: 0.03       # was 0.037 — rents ease but still run ahead of CPI
+  # was -0.009 — the long-run pattern reasserts itself and house prices outrun
+  # general inflation again. Note this is the LESS favourable direction for a
+  # buyer: houses getting dearer faster than everything else is what made the
+  # commons necessary. It sits in Optimistic because it lifts asset values and
+  # therefore gearing headroom, which is the sense in which the model calls it
+  # optimistic -- a reminder that the scenario names are about SLC's balance
+  # sheet, not about the housing market being good for anybody.
+  hpi_premium: 0.02
 
 tontine_fund:
   pf_ltv_limit: 0.75         # was 0.70 — lenders allow more gearing
@@ -41,8 +48,16 @@ bequests_gifts:
   gift_property_rate: 1.0     # was 0.5
 
 rent_yield:
-  gross_yield: 0.055         # was 0.05
-  lc_share: 0.85             # was 0.80 — a larger share of rent to the Commons
+  # was 0.05. Read this as buying BETTER, not charging more: a higher yield here
+  # means properties acquired at keener prices, off-market or from motivated
+  # sellers, at the same rent. Rent stays below market in every scenario -- that
+  # is a commitment, not a variable, and raising it to make a covenant work is
+  # explicitly not available. See the note on gross_yield in base.yaml.
+  gross_yield: 0.055
+  # was 2.0 months. A maintenance function that matures faster: better
+  # contractor rates, fewer emergency call-outs, planned rather than reactive.
+  # 1.6 months leaves the Commons 86.7% of gross rent at small scale.
+  lc_maintenance_months: 1.6
   void_rate: 0.03            # was 0.05
 
 operating_efficiency:

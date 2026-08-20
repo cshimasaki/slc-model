@@ -43,6 +43,22 @@ tontine_fund:
     label: "Coupon basis (real = spread only; nominal = CPI + spread, the workbook error)"
     unit: "text"
     row: 0
+  pf_index_basis:
+    label: "What the principal is indexed to (rent / cpi / hpi)"
+    unit: "text"
+    row: 0
+  pf_fund_admin_early:
+    label: "Fund administration — part-time, pro-rata, at the start (real)"
+    unit: "£ p.a."
+    row: 0
+  pf_fund_admin_target:
+    label: "Fund administration — full role with actuarial and audit (real)"
+    unit: "£ p.a."
+    row: 0
+  pf_fund_admin_mature_raise:
+    label: "Cumulative raise at which the full administration role is needed"
+    unit: "£"
+    row: 0
   pf_fund_op_margin:
     label: "Fund operating cost margin"
     unit: "% p.a."
@@ -205,10 +221,22 @@ rent_yield:
     label: "Gross rental yield"
     unit: "% of purchase price"
     row: 41
-  lc_share:
-    label: "Land Commons share of gross rent"
-    unit: "%"
-    row: 42
+  # `lc_share` (row 42) is deliberately absent. It was a flat 80% and is now
+  # derived per year from the three parameters below, so it is no longer an
+  # input. The frozen port-reference assumptions still carry the flat value,
+  # which is what reproduces the workbook.
+  lc_maintenance_months:
+    label: "Maintenance and other property costs, in months of rent"
+    unit: "months"
+    row: 0
+  lc_cost_learning_rate:
+    label: "Saving on that cost share per doubling of the portfolio"
+    unit: "x"
+    row: 0
+  lc_cost_floor:
+    label: "Floor on the maintenance cost share, as a fraction of the small-scale share"
+    unit: "x"
+    row: 0
   void_rate:
     label: "Void rate"
     unit: "%"

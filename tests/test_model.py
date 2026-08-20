@@ -36,12 +36,19 @@ def test_deltas_apply_over_base():
     base, stress = load("base"), load("stress")
     # Stress overrides these...
     assert base.void_rate == 0.05 and stress.void_rate == 0.15
-    assert base.cpi_general == 0.025 and stress.cpi_general == 0.045
+    assert base.cpi_general == 0.029 and stress.cpi_general == 0.045
     assert base.hpi_shock_year == 0 and stress.hpi_shock_year == 5
+    # Stress reverses the sign of the house-price premium: Base has houses
+    # growing slower than prices generally (the ONS position in Aug 2026),
+    # Stress has them running a point ahead again.
+    assert base.hpi_premium == -0.009 and stress.hpi_premium == 0.01
     # ...and inherits everything else, including the shock's own size.
     assert stress.hpi_shock_pct == base.hpi_shock_pct == -0.20
     assert stress.rent_shock_rate == base.rent_shock_rate == 0.0
     assert stress.pf_ltv_limit == base.pf_ltv_limit
+    # Rent inflation is NOT worsened in Stress: it stays at Base's 3.7% while
+    # CPI goes to 4.5%. The squeeze is the gap, not a rent collapse.
+    assert stress.rent_inflation == base.rent_inflation == 0.037
 
 
 def test_coupon_spread_is_derived_not_stored():

@@ -221,7 +221,40 @@ def admin_costs(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
     )
     g.opex_scale_factor.append(scale)
 
+    # Running the Tontine fund itself: administrator, actuarial valuation and
+    # audit. Not in the workbook, which buried this in a 0.50% margin added to
+    # the coupon -- a percentage that yields GBP 20,000 on a small fund (too
+    # little to pay an actuary) and GBP 1m on a large one (far more than the job
+    # costs). It is mostly a person, so it is modelled as a person: part-time
+    # and pro-rata at the start, growing to a full role as the fund matures.
+    #
+    # It sits in operating costs rather than in the coupon because that is what
+    # it is. The investor receives pf_investor_rate; this is what it costs the
+    # Commons to run the vehicle that pays them, and putting it here means it
+    # reduces the operating surplus and shows up in the cover ratios honestly.
+    #
+    # Board and trustees are assumed voluntary or on small honoraria, so there
+    # is no separate governance salary line.
+    # It scales with the FUND, not with the calendar. A time-based ramp puts a
+    # full salary on a fund that never grew -- under Stress that produced an
+    # administrator costing 47% of all rental income to look after fifteen
+    # houses, which is not a decision anybody would make. Staffing follows the
+    # work, so the ramp is driven by how much has actually been raised.
+    #
+    # Measured on last year's cumulative raise: this runs before tontine() sets
+    # the current year's, and using the prior close keeps the model acyclic in
+    # the same way the affordability test does.
+    early = getattr(a, "pf_fund_admin_early", 0.0)
+    if early:
+        target = getattr(a, "pf_fund_admin_target", early)
+        mature = max(1.0, getattr(a, "pf_fund_admin_mature_raise", 20_000_000))
+        raised = prior(s.capital.tf_cum_raised_closing, i)
+        fund_ramp = min(1.0, max(0.0, raised / mature))
+        g.admin_fund.append((early + fund_ramp * (target - early)) * m.cost_index[i])
+    else:
+        g.admin_fund.append(0.0)
+
     g.admin_total.append(                                                # row 20
         g.admin_board[i] + g.admin_accounting[i] + g.admin_fca[i]
-        + g.admin_insurance[i] + g.admin_variable[i]
+        + g.admin_insurance[i] + g.admin_variable[i] + g.admin_fund[i]
     )
