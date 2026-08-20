@@ -1,4 +1,56 @@
 # =============================================================================
+# WHY THIS CONFIGURATION — read before changing the four headline parameters
+# =============================================================================
+# Four values were chosen together in August 2026 after working the frontier.
+# They interact, so moving one without the others usually makes things worse:
+#
+#   pf_investor_rate    4.75%   what the annuitant receives, real, over an
+#                               indexed principal
+#   pf_ltv_limit        45%     how much the Commons is willing to owe
+#   cs_dividend_rate    5.00%   what the share offer advertises (a cap, paid at
+#                               board discretion)
+#   mix_shares_start    45%     share of each year's purchases funded by shares
+#
+# WHY 4.75% AND NOT 4.25%. The principal is never repaid, so the coupon is the
+# entire return. At 4.25% an annuitant recovers ~93% of their capital by median
+# survival (age 87); at 4.75% they recover ~104%. Below break-even the offer is
+# philanthropy with a yield and will not raise money from anyone comparing it
+# with an annuity. 4.58% is the break-even; 4.75% clears it with a little room.
+#
+# WHY 45% LTV AND NOT 70%. Almost free. Base loses about 2% of its portfolio and
+# Stress about 6%, and in exchange senior cover rises from roughly 1.85 to 2.16
+# in Base and 1.41 to 1.72 in Stress. Less debt means less interest, which means
+# more free cash, which buys back most of the houses the lower gearing gave up.
+# Gearing is not the growth engine people assume it is.
+#
+# WHY 5% ON SHARES AND NOT 3%. At 3% against CPI of 2.9% the real return is
+# +0.10%. Withdrawable shares in a CBS are repayable at par, so capital cannot
+# appreciate and inflation protection has to come through the rate -- a 3% offer
+# is a donation with paperwork. 5% delivers about +2.1% real. 6% is past the
+# edge: Stress delivery falls to 87%, so an investor told 6% receives 5.2%.
+#
+# WHY SHARES AT 45% OF NEED. Share capital is unencumbered, so it is what the
+# senior layer gears against -- it is not a competitor to the Tontine but its
+# foundation. Cutting shares to a symbolic 3% makes Stress WORSE, not better:
+# rent-only cover falls from 1.01 to 0.76 and the portfolio from 51 houses to
+# 29. cs_max_pct_capital had to rise to 50% for the target to bind at all.
+#
+# WHAT IT PRODUCES. All three scenarios clear every covenant, which no earlier
+# configuration did. Stress holds senior cover at 1.68 with zero breaches and
+# rent-only cover of 2.28, and the share offer delivers 92% of what it
+# advertises. Base reaches 189 houses, Stress 123.
+#
+# WHAT IT COSTS, AND WHO PAYS. Nothing here is free. Under Stress the share
+# offer under-delivers -- investors are told 5% and receive about 4.6% -- and
+# that is the subordination working as designed: shareholders wait so that
+# annuitants never do. Anyone marketing the share offer should say so plainly.
+#
+# NOT SET BY THIS ANALYSIS. Rent stays below market as a commitment, never as a
+# covenant lever. The stock mix is a policy choice and matters more than any of
+# the four above. pf_invest_phase_yrs stays at 10 because extending it needs an
+# income covenant that is not built.
+#
+# =============================================================================
 # STROUD LAND COMMONS — BASE SCENARIO ASSUMPTIONS
 # =============================================================================
 # This file is the full parameter set. Optimistic and Stress hold only the
@@ -76,7 +128,8 @@ tontine_fund:
   # needing about 4.58%). Where a gap exists, closing it needs the levers on
   # SLC's side -- what we buy, gift income, scale efficiency, a lower LTV -- not
   # a higher coupon. See MODEL_LOG.
-  pf_investor_rate: 0.0425       # Target investor annuity rate, spread over index (% p.a.)
+
+  pf_investor_rate: 0.0475       # Target investor annuity rate, spread over index (% p.a.)
 
   # How the coupon rate is applied to the (already CPI-uplifted) principal.
   #   real     coupon = spread only. The investor's inflation protection
@@ -174,7 +227,8 @@ tontine_fund:
   pf_mortality_gain_to_commons: 1.0
 
 
-  pf_ltv_limit: 0.70             # LTV limit (% of portfolio value)
+
+  pf_ltv_limit: 0.45             # LTV limit (% of portfolio value)
   pf_refi_toggle: 0              # Refinance into commercial mortgage? (1 = Yes)
   pf_refi_year: 26               # Refinancing year (model year)
   pf_refi_rate: 0.055            # Commercial mortgage rate (% p.a.)
@@ -190,7 +244,8 @@ community_shares:
   # Societies routinely pay nothing for the first few years and step up once the
   # project is cash-generative. The model pays it only where surplus allows, and
   # records the gap in cs_interest_shortfall.
-  cs_dividend_rate: 0.03         # Advertised interest rate, capped (% p.a.)
+
+  cs_dividend_rate: 0.05         # Advertised interest rate, capped (% p.a.)
 
   # Pay share interest only after the reserve has been topped up, not merely
   # after the annuity interest. This is what makes "interest eats the project"
@@ -198,7 +253,8 @@ community_shares:
   # from money that has already passed every other claim, including the buffer
   # the annuity itself depends on.
   cs_interest_after_reserve: true
-  cs_max_pct_capital: 0.20       # Maximum issuance cap (% of total capital)
+
+  cs_max_pct_capital: 0.50       # Maximum issuance (% of total capital)
   # Withdrawal restriction period. The workbook had 5; the actual share offer
   # terms are 2, corrected Aug 2026.
   #
@@ -240,10 +296,14 @@ funding_mix:
   # annual share issuance, which is what the V2.1 spreadsheet did.
   cs_issue_mode: share_of_need   # "share_of_need" | "fixed"
 
-  mix_tontine_start: 0.80        # year 1
-  mix_shares_start: 0.15         # remainder (5%) expected from gifts and RCOs
-  mix_tontine_end: 0.30          # after the transition
-  mix_shares_end: 0.50           # remainder (20%) from gifts and RCOs
+
+  mix_tontine_start: 0.50
+
+  mix_shares_start: 0.45
+
+  mix_tontine_end: 0.50
+
+  mix_shares_end: 0.45
   mix_transition_years: 30       # linear glide; a placeholder shape, not a forecast
 
 bequests_gifts:

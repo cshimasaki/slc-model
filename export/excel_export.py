@@ -5,11 +5,16 @@ Reproduces the reader-facing statements with proper number formatting, section
 grouping and totals. Not a raw data dump: an accountant should be able to open
 it and read it as accounts.
 
-Values, not formulas. Python is the source of computational truth, so the
-workbook carries the numbers the model computed rather than re-deriving them in
-a second, subtly different implementation. `--formulas` emits a clearly
-separate variant with a live inputs tab for people who want to poke at it; the
-authoritative figures remain the default export.
+Values, not formulas, with one deliberate exception. Python is the source of
+computational truth, so the workbook carries the numbers the model computed
+rather than re-deriving them in a second, subtly different implementation.
+
+The exception is the "What-if" sheet, which is genuinely live. It is safe to be
+live because it does not reproduce the model: it computes the steady-state
+economics of a SINGLE HOUSE, which is a page of arithmetic. That page happens to
+govern the headline decisions -- marginal cover on one debt-funded house is the
+ratio the whole portfolio converges to -- so it is worth being able to poke at.
+It has no sense of time, and says so on the face of it.
 
 CSVs of the raw yearly tables are written alongside for anyone who wants the
 underlying data.
@@ -582,6 +587,204 @@ def _comparison(wb: Workbook, results: dict[str, ModelRun]) -> None:
     ws.sheet_view.showGridLines = False
 
 
+def _what_if(wb: Workbook, result: ModelRun,
+             results: dict[str, ModelRun]) -> None:
+    """
+    A live, editable per-house calculator. The only sheet with real formulas.
+
+    Everything else in this workbook carries values, because Python is the
+    source of computational truth and a second implementation in Excel would
+    drift. This sheet is the deliberate exception, and it is safe to be one
+    because it does NOT reproduce the model: it computes the steady-state
+    economics of a single house, which is a page of arithmetic rather than fifty
+    years of compounding.
+
+    It earns its place because that arithmetic is what governs the four headline
+    decisions. Marginal cover on one debt-funded house is the ratio the whole
+    portfolio converges to; the fifty-year model mostly shows how long it takes
+    to get there. So a reader who wants to know what a lower LTV or a dearer
+    house does can find out here in a second, then check it against the modelled
+    scenarios on the other sheets.
+
+    What it cannot tell you is anything about time. Growth, the early-years
+    ramp, reserve building, mortality extinguishing the charge, gifts arriving,
+    scale efficiency -- none of it is here.
+    """
+    a = result.assumptions
+    ws = wb.create_sheet("What-if", 2)
+    row = _title(ws, "What-if \u2014 one house, steady state",
+                 "The only sheet with live formulas. Edit the blue cells and everything below "
+                 "recalculates. Per-house economics only: it says nothing about growth or time.", 4)
+
+    def head(text, r):
+        ws.cell(row=r, column=1, value=text).font = Font(name=FONT, bold=True, size=10)
+        for col in range(1, 5):
+            ws.cell(row=r, column=col).fill = PatternFill("solid", fgColor=BAND)
+        return r + 1
+
+    def field(r, label, value, fmt, note=""):
+        ws.cell(row=r, column=1, value=label).font = Font(name=FONT)
+        ws.cell(row=r, column=1).alignment = Alignment(indent=1)
+        c = ws.cell(row=r, column=2, value=value)
+        c.number_format = fmt
+        c.font = Font(name=FONT, bold=True, color=INPUT_BLUE)
+        c.fill = PatternFill("solid", fgColor="FFEAF1FB")
+        c.border = Border(top=thin, bottom=thin, left=thin, right=thin)
+        if note:
+            ws.cell(row=r, column=3, value=note).font = Font(name=FONT, size=9, color=MUTED)
+        return r + 1
+
+    st = a.stock_types[0] if getattr(a, "stock_types", None) else None
+    price = float(st["price"]) if st else float(a.avg_price)
+    rent_pcm = float(st["rent_pcm"]) if st else a.avg_price * a.gross_yield / 12
+
+    row = head("INPUTS \u2014 edit these", row)
+    r_price = row;  row = field(row, "House price", price, FMT_MONEY,
+                                "the biggest lever on this page")
+    r_rent = row;   row = field(row, "Rent per month", rent_pcm, FMT_MONEY,
+                                "below market \u2014 a commitment, not a dial")
+    r_fees = row;   row = field(row, "Fees and retrofit on purchase",
+                                float(a.conveyancing + a.survey_cost + a.retrofit_cost), FMT_MONEY)
+    r_maint = row;  row = field(row, "Maintenance + admin, months of rent",
+                                float(getattr(a, "lc_maintenance_months", 2.0)), "0.0",
+                                "covers admin AND maintenance")
+    r_void = row;   row = field(row, "Void rate", float(a.void_rate), FMT_PCT)
+    r_sink = row;   row = field(row, "Sinking fund per house per year",
+                                float(a.sinking_per_prop), FMT_MONEY,
+                                "major works; not inside the months above")
+    row += 1
+    r_ltv = row;    row = field(row, "LTV limit \u2014 Tontine share of value",
+                                float(a.pf_ltv_limit), FMT_PCT)
+    r_coup = row;   row = field(row, "Tontine investor rate (real)",
+                                float(a.pf_investor_rate), FMT_PCT)
+    r_reg = row;    row = field(row, "Fund regulatory capital charge",
+                                float(a.pf_fund_reg_charge), FMT_PCT)
+    r_srate = row;  row = field(row, "Share rate advertised",
+                                float(a.cs_dividend_rate), FMT_PCT)
+    r_sshare = row; row = field(row, "Shares \u2014 share of purchase funded",
+                                float(getattr(a, "mix_shares_start", 0.45)), FMT_PCT)
+    row += 1
+    r_target = row; row = field(row, "Target cover (for the max-price answer)",
+                                float(getattr(a, "cov_cash_cover_min", 1.25)), FMT_RATIO)
+    row += 1
+
+    def B(r):
+        return "B%d" % r
+
+    cost = "(%s+%s)" % (B(r_price), B(r_fees))
+    gross = "(%s*12)" % B(r_rent)
+    net = "(%s*(1-%s/12)*(1-%s))" % (gross, B(r_maint), B(r_void))
+    ton_debt = "(%s*%s)" % (B(r_price), B(r_ltv))
+    ton_int = "(%s*(%s+%s))" % (ton_debt, B(r_coup), B(r_reg))
+    sh_cap = "(%s*%s)" % (cost, B(r_sshare))
+    sh_int = "(%s*%s)" % (sh_cap, B(r_srate))
+    avail = "(%s-%s)" % (net, B(r_sink))
+
+    row = head("WHAT THE HOUSE EARNS AND OWES", row)
+    lines = [
+        ("All-in cost to acquire", "=" + cost, FMT_MONEY, "price plus fees and retrofit"),
+        ("Gross rent per year", "=" + gross, FMT_MONEY, ""),
+        ("Gross yield on price", "=%s/%s" % (gross, B(r_price)), FMT_PCT,
+         "matched stock, not average rent over average price"),
+        ("Net rent to the Commons", "=" + net, FMT_MONEY, "after maintenance, admin and voids"),
+        ("Available after the sinking fund", "=" + avail, FMT_MONEY,
+         "this is what capital has to be paid out of"),
+        (None, None, None, None),
+        ("Tontine debt this house carries", "=" + ton_debt, FMT_MONEY, ""),
+        ("Tontine interest per year", "=" + ton_int, FMT_MONEY,
+         "extinguishes when the investor dies"),
+        ("Share capital this house carries", "=" + sh_cap, FMT_MONEY, ""),
+        ("Share interest per year", "=" + sh_int, FMT_MONEY, "permanent, and discretionary"),
+        ("Free capital required", "=%s-%s-%s" % (cost, ton_debt, sh_cap), FMT_MONEY,
+         "gifts and retained surplus must cover this"),
+        ("Free capital as a share of cost",
+         "=(%s-%s-%s)/%s" % (cost, ton_debt, sh_cap, cost), FMT_PCT, ""),
+    ]
+    for label, formula, fmt, note in lines:
+        if label is None:
+            row += 1
+            continue
+        ws.cell(row=row, column=1, value=label).font = Font(name=FONT)
+        ws.cell(row=row, column=1).alignment = Alignment(indent=1)
+        c = ws.cell(row=row, column=2, value=formula)
+        c.number_format = fmt
+        c.font = Font(name=FONT)
+        if note:
+            ws.cell(row=row, column=3, value=note).font = Font(name=FONT, size=9, color=MUTED)
+        row += 1
+
+    row += 1
+    row = head("THE ANSWERS", row)
+    maxprice = "%s/(%s*%s*(%s+%s))-%s" % (
+        avail, B(r_target), B(r_ltv), B(r_coup), B(r_reg), B(r_fees))
+    answers = [
+        ("Senior cover \u2014 can rent pay the annuity?", "=%s/%s" % (avail, ton_int), FMT_RATIO,
+         "the covenant that protects the annuitant"),
+        ("All-in cover \u2014 can it also pay the share offer?",
+         "=%s/(%s+%s)" % (avail, ton_int, sh_int), FMT_RATIO,
+         "below 1.0 the offer under-delivers; it is not a default"),
+        ("Most we can pay for this house, at target cover", "=" + maxprice, FMT_MONEY,
+         "compare with the price above"),
+        ("Headroom against the price paid", "=(%s)/%s-1" % (maxprice, B(r_price)), FMT_PCT,
+         "negative means this house is too dear on these terms"),
+        ("Rent discount senior cover would still allow",
+         "=1-(%s*%s+%s)/%s" % (B(r_target), ton_int, B(r_sink), net), FMT_PCT,
+         "before any growth is given up"),
+    ]
+    for label, formula, fmt, note in answers:
+        ws.cell(row=row, column=1, value=label).font = Font(name=FONT, bold=True)
+        ws.cell(row=row, column=1).alignment = Alignment(indent=1)
+        c = ws.cell(row=row, column=2, value=formula)
+        c.number_format = fmt
+        c.font = Font(name=FONT, bold=True)
+        ws.cell(row=row, column=3, value=note).font = Font(name=FONT, size=9, color=MUTED)
+        row += 1
+
+    row += 2
+    row = head("HOW THIS COMPARES WITH THE MODELLED RUNS", row)
+    for name, r in results.items():
+        cover = [v for v in r.state.capital.cash_interest_cover if isinstance(v, (int, float))]
+        allin = [v for v in r.state.capital.all_in_cover if isinstance(v, (int, float))]
+        ws.cell(row=row, column=1,
+                value="%s \u2014 minimum over 50 years" % name.title()).font = Font(name=FONT)
+        ws.cell(row=row, column=1).alignment = Alignment(indent=1)
+        c = ws.cell(row=row, column=2, value=min(cover) if cover else None)
+        c.number_format = FMT_RATIO
+        c.font = Font(name=FONT)
+        ws.cell(row=row, column=3,
+                value="senior; all-in minimum %.2f" % (min(allin) if allin else 0)
+                ).font = Font(name=FONT, size=9, color=MUTED)
+        row += 1
+
+    row += 1
+    ws.cell(row=row, column=1,
+            value="Why those numbers differ from this page \u2014 read this before worrying."
+            ).font = Font(name=FONT, bold=True, size=10)
+    row += 1
+    for line in [
+        "This page prices a house bought TODAY, carrying today's capital mix: Tontine and shares",
+        "together fund about nine tenths of it, so all-in cover looks thin. The modelled portfolio",
+        "does far better because free capital \u2014 gifts, and surplus retained year after year \u2014",
+        "grows to roughly three quarters of the balance sheet by year 50, and the Tontine charge",
+        "extinguishes as its investors die. Neither of those can appear on a single-house page.",
+        "",
+        "So the difference is not an error in either place. This page shows the marginal house;",
+        "the scenario sheets show the portfolio that owns it.",
+        "",
+        "It cuts the other way too. A configuration that looks comfortable here can still breach in",
+        "year 7, because the early years carry full fixed costs on a handful of houses. Use this",
+        "page to understand WHY a change helps or hurts; use the scenario sheets to find out",
+        "whether it survives.",
+    ]:
+        ws.cell(row=row, column=1, value=line).font = Font(name=FONT, size=9, color=MUTED)
+        row += 1
+
+    ws.column_dimensions["A"].width = 46
+    ws.column_dimensions["B"].width = 16
+    ws.column_dimensions["C"].width = 54
+    ws.sheet_view.showGridLines = False
+
+
 def _for_review(wb: Workbook, results: dict[str, ModelRun]) -> None:
     """
     A sheet written for the reviewer, not for the model.
@@ -630,9 +833,14 @@ def _for_review(wb: Workbook, results: dict[str, ModelRun]) -> None:
     def pct(v):
         return f"{v * 100:.2f}%" if v is not None else "no rate clears"
 
+    # Measured on STRESS, not on whichever scenario the workbook was built for.
+    # This line answers "what does the modelled rate cost us in the bad case",
+    # and reporting Base's comfortable zero here would answer a question nobody
+    # asked while looking like reassurance.
+    stress = results["stress"]
     breaches = sum(
-        1 for v in result.state.capital.cash_interest_cover
-        if isinstance(v, (int, float)) and v < a.cov_cash_cover_min
+        1 for v in stress.state.capital.cash_interest_cover
+        if isinstance(v, (int, float)) and v < stress.assumptions.cov_cash_cover_min
     )
 
     block("1. THE PRICING FRONTIER — the most important open question", [
@@ -646,8 +854,8 @@ def _for_review(wb: Workbook, results: dict[str, ModelRun]) -> None:
         ("Currently modelled", f"{inv * 100:.2f}%"),
         ("Capital the investor recovers over their expected life", f"{recovered:.0f}%"),
         ("Consequence at the modelled rate",
-         f"this scenario breaches in {breaches} of {result.n_years} years"
-         if breaches else "no covenant breach in this scenario"),
+         f"Stress breaches in {breaches} of {stress.n_years} years"
+         if breaches else "Stress clears every covenant in every year"),
         ("The question for you", "Is a self-imposed covenant allowed to breach in a severe stress?"),
     ])
 
@@ -703,6 +911,7 @@ def write_workbook(path: str, scenario: str = "base",
 
     _dashboard(wb, result)
     _for_review(wb, results)
+    _what_if(wb, result, results)
     _comparison(wb, results)
     _financial_statements(wb, result)
     _monthly(wb, result)
