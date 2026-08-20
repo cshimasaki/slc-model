@@ -139,10 +139,21 @@ def _check_invariants(s: ModelState, n_years: int, n_months: int) -> None:
     """
     for i in range(n_years):
         # Financial Statements row 46: assets = liabilities + reserves.
-        if abs(s.statements.balance_check[i]) > CHECK_TOLERANCE:
+        #
+        # Scaled by the size of the balance sheet, not a flat cash amount. A
+        # fixed tolerance is really a claim about how many significant figures
+        # of floating-point accuracy survive, and that claim gets harder to
+        # meet as the numbers grow: a GBP 1bn balance sheet accumulated the
+        # allowed absolute error just from ordinary double-precision rounding
+        # and failed a run that was arithmetically fine. The relative floor
+        # keeps the original absolute tolerance for small balance sheets, where
+        # dividing by a near-zero total would be the more dangerous mistake.
+        scale = max(abs(s.statements.total_assets[i]), 1.0)
+        if abs(s.statements.balance_check[i]) > max(CHECK_TOLERANCE, scale * 1e-9):
             raise ModelError(
                 f"balance sheet does not balance in year {i + 1}: "
-                f"assets - (liabilities + reserves) = {s.statements.balance_check[i]:,.6f}"
+                f"assets - (liabilities + reserves) = {s.statements.balance_check[i]:,.6f} "
+                f"on total assets of {s.statements.total_assets[i]:,.0f}"
             )
 
         # Asset Register rows 62 vs 10-59: the sheet computes this year's
