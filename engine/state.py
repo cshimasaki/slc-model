@@ -153,6 +153,12 @@ class CapitalState:
     total_interest: list[float] = field(default_factory=_years)         # row 53
     total_principal: list[float] = field(default_factory=_years)        # row 54
     total_debt_service: list[float] = field(default_factory=_years)     # row 55
+    # Community share interest CONTRACTED for, whether or not it got paid, and
+    # the total financing cost including it. No workbook rows: the sheet left
+    # share interest out of every covenant test.
+    cs_interest_due: list[float] = field(default_factory=_years)
+    cs_interest_shortfall: list[float] = field(default_factory=_years)
+    total_financing_cost: list[float] = field(default_factory=_years)
     total_debt: list[float] = field(default_factory=_years)             # row 56
     ltv: list[float] = field(default_factory=_years)                    # row 57
     total_capital_employed: list[float] = field(default_factory=_years) # row 58

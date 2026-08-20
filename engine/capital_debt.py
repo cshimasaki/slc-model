@@ -350,7 +350,7 @@ def debt_service(s: ModelState, a: Assumptions, i: int) -> None:
     c.unfunded_requirement.append(max(0.0, c.tf_funding_requirement[i] - c.tf_drawdown[i]))
 
 
-def coverage(s: ModelState, i: int) -> None:
+def coverage(s: ModelState, a: Assumptions, i: int) -> None:
     """
     Rows 58-59 and 64-65 -- capital mix and covenant ratios.
 
@@ -366,28 +366,59 @@ def coverage(s: ModelState, i: int) -> None:
         else c.cs_closing[i] / c.total_capital_employed[i]
     )
 
+    # Community share interest, on the CONTRACTED rate and the opening balance
+    # -- what was promised, not what got paid.
+    #
+    # The distinction matters because cs_dividends is capped at the year's
+    # surplus, so in a bad year the paid figure falls with the surplus. Testing
+    # cover against the paid amount would divide a small numerator by a small
+    # denominator and report that everything is fine, which is precisely the
+    # year you want the covenant to fire.
+    #
+    # In law, interest on withdrawable share capital in a community benefit
+    # society is discretionary and capped at "no more than necessary to obtain
+    # and retain the capital". Commercially it is nothing of the sort: an offer
+    # that skips its interest does not raise again. So it is treated here as a
+    # fixed charge for covenant purposes, which is also how any senior lender
+    # would look at it.
+    c.cs_interest_due.append(c.cs_opening[i] * a.cs_dividend_rate)
+    c.cs_interest_shortfall.append(max(0.0, c.cs_interest_due[i] - c.cs_dividends[i]))
+
     service = c.total_debt_service[i]
-    if service <= 0:
+    # The workbook's DSCR and reserve cover are computed on debt service alone,
+    # because the sheet left share interest out of every covenant test. Those
+    # two rows keep that basis so the Excel comparison still holds. Our own
+    # cover tests do not: they use the full financing cost, because a pound of
+    # share interest is as due as a pound of Tontine coupon.
+    financing = service + c.cs_interest_due[i]
+    c.total_financing_cost.append(financing)
+
+    if service <= 0 and financing <= 0:
         c.dscr.append("")                                                      # row 64
         c.reserve_cover.append("")                                             # row 65
         c.cash_interest_cover.append("")
         c.rent_only_cover.append("")
+        return
+
+    if service <= 0:
+        c.dscr.append("")                                                      # row 64
+        c.reserve_cover.append("")                                             # row 65
     else:
         c.dscr.append(s.statements.operating_surplus[i] / service)
         c.reserve_cover.append(s.statements.free_cash[i] / (service / 12))
 
-        # Cash cover: strip out donated property. It is income, and it is an
-        # asset, but it is not money -- interest cannot be paid with a house.
-        non_cash = s.assets.gift_property_value[i]
-        c.cash_interest_cover.append(
-            (s.statements.operating_surplus[i] - non_cash) / service
-        )
+    # Cash cover: strip out donated property. It is income, and it is an
+    # asset, but it is not money -- interest cannot be paid with a house.
+    non_cash = s.assets.gift_property_value[i]
+    c.cash_interest_cover.append(
+        (s.statements.operating_surplus[i] - non_cash) / financing
+    )
 
-        # Rent-only cover: strip out every gift, cash included. This asks the
-        # harder question -- can the portfolio service its own debt from the
-        # rent it earns, with no reliance on giving that nobody is obliged to
-        # continue?
-        all_gifts = s.statements.gifts_and_bequests[i] + s.statements.gift_aid[i]
-        c.rent_only_cover.append(
-            (s.statements.operating_surplus[i] - all_gifts) / service
-        )
+    # Rent-only cover: strip out every gift, cash included. This asks the
+    # harder question -- can the portfolio service its own financing from the
+    # rent it earns, with no reliance on giving that nobody is obliged to
+    # continue?
+    all_gifts = s.statements.gifts_and_bequests[i] + s.statements.gift_aid[i]
+    c.rent_only_cover.append(
+        (s.statements.operating_surplus[i] - all_gifts) / financing
+    )

@@ -118,7 +118,7 @@ def run(
         statements.cash_flow(s, a, i)
         statements.balance_sheet(s, a, i)
         statements.memorandum(s, a, i)
-        capital_debt.coverage(s, i)
+        capital_debt.coverage(s, a, i)
 
     monthly.compute(s, a, n_months)
 
