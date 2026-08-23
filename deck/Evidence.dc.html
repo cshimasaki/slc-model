@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #2f5d50; } a:hover { color: #16211c; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 720px; background: #f6f8f6; color: #16211c; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; gap: 30px; padding: 68px 88px; box-sizing: border-box;">
+
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+    <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #7a8a82;">04 &nbsp;·&nbsp; What stands behind the numbers</div>
+    <h2 style="font-family: Spectral, Georgia, serif; font-weight: 600; font-size: 50px; line-height: 1.08; letter-spacing: -0.015em; margin: 0; max-width: 960px; text-wrap: balance;">What we know, and what we don't</h2>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 44px; flex-grow: 1;">
+
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #2f5d50; border-bottom: 1.5px solid #2f5d50; padding-bottom: 10px;">Tested</div>
+
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <div style="font-family: Spectral, Georgia, serif; font-size: 30px; line-height: 1;">13,150 cells</div>
+        <div style="font-size: 15px; line-height: 1.5; color: #4c5b54;">checked against the source workbook across three scenarios, matching exactly — and re-checked on every change since.</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <div style="font-family: Spectral, Georgia, serif; font-size: 30px; line-height: 1;">Zero breaches</div>
+        <div style="font-size: 15px; line-height: 1.5; color: #4c5b54;">in all three scenarios, against covenants we set on ourselves. Under severe stress: 125 homes, cover 1.52×.</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <div style="font-family: Spectral, Georgia, serif; font-size: 30px; line-height: 1;">185 homes</div>
+        <div style="font-size: 15px; line-height: 1.5; color: #4c5b54;">by year 50 on base assumptions, held permanently out of the market, with £111m of net assets behind them.</div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #96442e; border-bottom: 1.5px solid #96442e; padding-bottom: 10px;">Not yet known</div>
+
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <div style="font-size: 17px; font-weight: 500;">Retrofit cost is our judgement, not a quote</div>
+        <div style="font-size: 15px; line-height: 1.5; color: #4c5b54;">£12,000 a house. It moves the arithmetic directly and wants real figures before it drives a decision.</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <div style="font-size: 17px; font-weight: 500;">Our mortality basis understates longevity</div>
+        <div style="font-size: 15px; line-height: 1.5; color: #4c5b54;">It uses population rather than annuitant data. University actuarial work lands in September and replaces it.</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <div style="font-size: 17px; font-weight: 500;">Below-market rent is a transfer, not a saving</div>
+        <div style="font-size: 15px; line-height: 1.5; color: #4c5b54;">A 25% discount clears every covenant — and costs roughly forty homes by year 50. We would rather say so than discover it later.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="border-top: 1px solid #dce3de; padding-top: 24px; display: flex; flex-direction: column; gap: 20px;">
+    <p style="font-family: Spectral, Georgia, serif; font-size: 26px; line-height: 1.35; margin: 0; max-width: 900px;">The model has been wrong five times that we know of, and each time we found it by testing a result that looked convincing. Everything above is open to your own reviewer.</p>
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 40px;">
+      <div style="font-size: 16px; color: #4c5b54;">[NAME] &nbsp;·&nbsp; [EMAIL] &nbsp;·&nbsp; [PHONE]</div>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.7; color: #7a8a82; text-align: right; white-space: nowrap;">
+        <div>Model, assumptions and decision log</div>
+        <div>are open and version-controlled</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

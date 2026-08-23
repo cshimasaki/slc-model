@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #2f5d50; } a:hover { color: #16211c; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 720px; background: #f6f8f6; color: #16211c; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; gap: 32px; padding: 68px 88px; box-sizing: border-box;">
+
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+    <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #7a8a82;">03 &nbsp;·&nbsp; Why you, and not a lender</div>
+    <h2 style="font-family: Spectral, Georgia, serif; font-weight: 600; font-size: 50px; line-height: 1.08; letter-spacing: -0.015em; margin: 0; max-width: 980px; text-wrap: balance;">Grant capital is the only layer that can absorb a ramp</h2>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
+
+    <div style="border: 1px solid #dce3de; background: #ffffff; padding: 26px 24px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: #7a8a82;">MORTAL CAPITAL</div>
+      <div style="font-family: Spectral, Georgia, serif; font-size: 27px; line-height: 1.15;">The Tontine</div>
+      <p style="font-size: 15px; line-height: 1.55; color: #4c5b54; margin: 0;">Pensioners buy a lifetime annuity. We pay 4.75% while they live; on death the charge is extinguished and no principal is ever repaid.</p>
+      <div style="margin-top: auto; padding-top: 12px; font-size: 14px; color: #2f5d50;">Expensive per year. It ends.</div>
+    </div>
+
+    <div style="border: 1px solid #dce3de; background: #ffffff; padding: 26px 24px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: #7a8a82;">PERMANENT CAPITAL</div>
+      <div style="font-family: Spectral, Georgia, serif; font-size: 27px; line-height: 1.15;">Community shares</div>
+      <p style="font-size: 15px; line-height: 1.55; color: #4c5b54; margin: 0;">Local people take a capped, discretionary 5%. It never matures, and neither does the interest on it.</p>
+      <div style="margin-top: auto; padding-top: 12px; font-size: 14px; color: #2f5d50;">Cheaper per year. It never ends.</div>
+    </div>
+
+    <div style="border: 1.5px solid #2f5d50; background: #eef2ef; padding: 26px 24px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: #2f5d50;">FREE CAPITAL</div>
+      <div style="font-family: Spectral, Georgia, serif; font-size: 27px; line-height: 1.15; color: #2f5d50;">Grants and gifts</div>
+      <p style="font-size: 15px; line-height: 1.55; color: #4c5b54; margin: 0;">Asks nothing back, so it charges nothing in the years when there is nothing to charge it against.</p>
+      <div style="margin-top: auto; padding-top: 12px; font-size: 14px; color: #2f5d50; font-weight: 500;">The only layer that survives year one.</div>
+    </div>
+
+  </div>
+
+  <div style="background: #16211c; color: #f6f8f6; padding: 30px 34px; display: flex; gap: 40px; align-items: center;">
+    <div style="font-family: Spectral, Georgia, serif; font-size: 27px; line-height: 1.35; flex-grow: 1;">A patient loan at 5% does not help a ramp. It starts charging on day one, while the rent is still arriving — it makes the J-curve deeper, not shallower.</div>
+  </div>
+
+  <div style="display: flex; gap: 48px; align-items: flex-end; flex-grow: 1;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.13em; text-transform: uppercase; color: #7a8a82;">What we are asking for</div>
+      <div style="font-family: Spectral, Georgia, serif; font-size: 34px; line-height: 1.2; color: #2f5d50;">[£AMOUNT] as grant or first-loss, drawn over [N] years</div>
+      <div style="font-size: 16px; color: #4c5b54; max-width: 760px;">Sized to the ramp, not to the portfolio — it is spent covering the years before rent catches up, and it is what lets the other two layers be raised at all.</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

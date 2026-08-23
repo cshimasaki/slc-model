@@ -1,0 +1,13 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html",       "title": "1 · Cover",       "x": 0,    "y": 0, "w": 1280, "h": 720, "print": "fixed" },
+    { "file": "Arithmetic.dc.html", "title": "2 · Arithmetic",  "x": 1400, "y": 0, "w": 1280, "h": 720, "print": "fixed" },
+    { "file": "Ramp.dc.html",       "title": "3 · The ramp",    "x": 2800, "y": 0, "w": 1280, "h": 720, "print": "fixed" },
+    { "file": "Layers.dc.html",     "title": "4 · The ask",     "x": 4200, "y": 0, "w": 1280, "h": 720, "print": "fixed" },
+    { "file": "Evidence.dc.html",   "title": "5 · Evidence",    "x": 5600, "y": 0, "w": 1280, "h": 720, "print": "fixed" }
+  ],
+  "annotations": [
+    { "id": "placeholders", "x": 0, "y": -210, "w": 460, "text": "Fill before presenting:\n\n[£AMOUNT] · [N] years · [N] homes\n[FOUNDATION] · [DATE]\n[NAME] · [EMAIL] · [PHONE]\n\nThe ask is deliberately unsized. It should come from the ramp shortfall you decide to cover — not from a number I invented." }
+  ],
+  "launch": { "view": "canvas" }
+}
