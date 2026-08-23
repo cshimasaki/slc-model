@@ -49,7 +49,8 @@ TICKET = 50_000
 ENTRY_AGE = 65
 
 
-def build(scenario: str):
+def build(scenario: str, corporate: float | None = None,
+          gift_mult: float = 1.0):
     a = load(scenario)
     a.values["acq_year1"], a.values["acq_year2"], a.values["acq_year3"] = PLAN
     a.values["logistic_ceiling"] = sum(PLAN)
@@ -62,6 +63,30 @@ def build(scenario: str):
     # nobody asked and hides the one that was. The premise here is "the capital
     # is there"; what it takes to be there is then reported honestly.
     a.values["constrain_growth"] = 0
+
+    # The CCBS corporate function only. Housing Commons manages and maintains the
+    # homes, paid through the 16.67% of rent that never reaches the Commons at
+    # all -- so this line is accounting, financial management, governance, the
+    # FCA return, insurance and oversight of the annuity fund. It is NOT housing
+    # management, and benchmarking it against a housing association's staffing
+    # compares it to a job it does not do.
+    #
+    # The workbook's figure is flat from year 5 forever, which is wrong at both
+    # ends -- far too small at 185 homes, and 58% of gross rent at five. It wants
+    # a proper build-up by function against portfolio size. Until that exists,
+    # this is steerable and the sensitivity below shows what it decides.
+    if corporate is not None:
+        share = corporate / 4.0
+        a.values["board_early"] = a.values["board_target"] = share
+        a.values["acct_early"] = a.values["acct_target"] = share
+        a.values["fca_early"] = a.values["fca_target"] = share
+        a.values["ins_early"] = a.values["ins_target"] = share
+        a.values["pf_fund_admin_early"] = 0.0
+        a.values["pf_fund_admin_target"] = 0.0
+    if gift_mult != 1.0:
+        a.values["gift_baseline"] *= gift_mult
+        a.values["beq_baseline"] *= gift_mult
+        a.values["founding_capital"] *= gift_mult
     return run(a)
 
 
@@ -96,8 +121,62 @@ def cohorts(r):
     return rows
 
 
-def report(scenario: str, csv_dir: str | None) -> None:
-    r = build(scenario)
+def sensitivity(scenario: str) -> None:
+    """
+    Do five houses wash their face? Across the two numbers nobody has yet fixed.
+
+    Corporate cost is not settled, and neither is how much giving a five-house
+    commons can count on. Rather than pick one of each and present the answer as
+    a finding, this shows the grid -- because which cell you are in decides
+    whether the thing works, and that is the honest state of knowledge.
+
+    Rent-only cover is the measure that matters here: it strips every gift and
+    asks whether the HOUSES service the debt. Cash cover flatters this portfolio
+    badly, reading above 4x while rent alone covers 0.04x.
+    """
+    print(f"\n{'=' * 100}")
+    print(f"DOES IT WASH ITS FACE? — {scenario.upper()}, five houses")
+    print(f"{'=' * 100}")
+    print("  Rent-only cover at year 20 — gifts stripped out entirely.")
+    print("  Below 1.00 means the five houses do not service their own interest.\n")
+
+    print(f"{'corporate':<14}{'rent-only cover at yr 20':>26}{'years in deficit':>40}")
+    print(f"{'cost / yr':<14}{'(gifts stripped)':>26}"
+          f"{'gifts as modelled':>18}{'half':>10}{'none':>12}")
+    print("-" * 80)
+    for corp in (8_000, 15_000, 25_000, 38_292):
+        ro = None
+        defics = []
+        for mult in (1.0, 0.5, 0.0):
+            r = build(scenario, corporate=corp, gift_mult=mult)
+            c = r.state.capital
+            if ro is None:
+                ro = c.rent_only_cover[19]
+            defics.append(sum(1 for v in r.state.statements.retained_surplus if v < 0))
+        label = f"£{corp:,.0f}" + ("*" if corp > 38_000 else "")
+        ro_s = f"{ro:.2f}x" if isinstance(ro, (int, float)) else "—"
+        print(f"{label:<14}{ro_s:>26}{defics[0]:>18}{defics[1]:>10}{defics[2]:>12}")
+    print()
+    print("  * the figure currently in the model, which is a flat corporate cost")
+    print("    carried over from the workbook and never sized to a portfolio.")
+    print()
+    print("  Two separate questions, and the grid separates them:")
+    print()
+    print("  Rent-only cover moves ONLY with corporate cost, because the measure")
+    print("  strips gifts by definition. Sized for five houses (£8-15k for")
+    print("  bookkeeping, an independent examination, the FCA return and insurance)")
+    print("  the houses service their own interest comfortably by year 20 — 2.08x to")
+    print("  2.45x. At the modelled £38,292 they scrape 1.04x, and that is the")
+    print("  corporate figure failing, not the houses.")
+    print()
+    print("  Gifts decide the JOURNEY, not the destination. With giving as modelled")
+    print("  there is no deficit year at any corporate cost. With none, there are 9")
+    print("  to 26 — the houses still get there, but something has to fund them")
+    print("  while they do.")
+
+
+def report(scenario: str, csv_dir: str | None, corporate: float | None = None) -> None:
+    r = build(scenario, corporate=corporate)
     a, s, m = r.assumptions, r.state, r.macro
     g, A, c, f = s.growth, s.assets, s.capital, s.statements
     coh = cohorts(r)
@@ -237,11 +316,17 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--stress", action="store_true", help="also run the stress case")
     p.add_argument("--csv", metavar="DIR", help="write the tables as CSV")
+    p.add_argument("--corporate", type=float, metavar="GBP",
+                   help="CCBS corporate cost per year, real (default: as modelled)")
+    p.add_argument("--sensitivity", action="store_true",
+                   help="grid over corporate cost and giving")
     args = p.parse_args()
 
-    report("base", args.csv)
+    report("base", args.csv, args.corporate)
     if args.stress:
-        report("stress", args.csv)
+        report("stress", args.csv, args.corporate)
+    if args.sensitivity:
+        sensitivity("base")
     return 0
 
 
