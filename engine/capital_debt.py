@@ -144,7 +144,28 @@ def community_shares(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> N
 
     # Row 20: the cap, expressed against other capital. If shares may be at most
     # p of total capital, then shares <= p/(1-p) times everything else.
-    c.cs_max_permitted.append(a.cs_max_pct_capital / (1 - a.cs_max_pct_capital) * c.cs_other_capital[i])
+    #
+    # At INCEPTION that formula returns zero, because there is no other capital
+    # yet -- so the workbook could never issue a single share in year 1, however
+    # large the offer. For an organisation whose first money is normally a
+    # community share offer that is exactly backwards, and it was quietly
+    # forcing the Tontine and founding gifts to carry the entire first year.
+    #
+    # The cap protects a capital STRUCTURE from being dominated by withdrawable
+    # shares. In year 1 there is no structure to protect, so it has nothing to
+    # measure and does not bind; it applies from year 2 once there is a balance
+    # sheet to take a proportion of.
+    #
+    # Gated on the targeted issuance mode, because the frozen port-reference
+    # assumptions must keep reproducing the workbook -- including this. Lifting
+    # it unconditionally moved 12,511 cells and broke the Excel comparison, which
+    # is the check doing its job.
+    if year == 1 and getattr(a, "cs_issue_mode", "fixed") == "share_of_need":
+        c.cs_max_permitted.append(c.cs_target_issuance[i])
+    else:
+        c.cs_max_permitted.append(
+            a.cs_max_pct_capital / (1 - a.cs_max_pct_capital) * c.cs_other_capital[i]
+        )
 
     c.cs_opening.append(0.0 if year == 1 else prior(c.cs_closing, i))    # row 21
 

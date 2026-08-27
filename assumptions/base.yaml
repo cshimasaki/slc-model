@@ -254,7 +254,16 @@ community_shares:
   # the annuity itself depends on.
   cs_interest_after_reserve: true
 
-  cs_max_pct_capital: 0.50       # Maximum issuance (% of total capital)
+
+  # 70%, not 50%, and the difference is not slack -- it is what the target
+  # actually costs. mix_shares_start is a share of each year's PURCHASES;
+  # this is a share of the accumulated capital STACK. Shares stay on the
+  # balance sheet while the Tontine extinguishes with its investors, so a
+  # 50% purchase target drives the stack well above 50% within a few years.
+  # Set the cap at 50% and the two fight: year 1 issues its full offer,
+  # year 2 issues NOTHING because year 1 already reached the cap, and
+  # shares end up funding 39% rather than the 50% asked for.
+  cs_max_pct_capital: 0.70       # Maximum issuance (% of total capital)
   # Withdrawal restriction period. The workbook had 5; the actual share offer
   # terms are 2, corrected Aug 2026.
   #
@@ -297,9 +306,11 @@ funding_mix:
   cs_issue_mode: share_of_need   # "share_of_need" | "fixed"
 
 
-  mix_tontine_start: 0.50
 
-  mix_shares_start: 0.45
+  mix_tontine_start: 0.45
+
+
+  mix_shares_start: 0.50
 
   mix_tontine_end: 0.50
 
@@ -321,7 +332,15 @@ bequests_gifts:
 
   gift_baseline: 40000           # Cash gifts from living donors, Gift Aid eligible (£ p.a.)
   beq_baseline: 60000            # Bequests from estates, not Gift Aid eligible (£ p.a.)
-  founding_capital: 150000       # Founding capital injection, Year 1 only (£)
+
+  # Reduced from GBP 150,000. That figure had year-1 philanthropic income
+  # at GBP 150,000 before a single house was let, which is not what a new
+  # organisation raises on a promise -- and it was doing the work the share
+  # offer should be doing.
+  #
+  # JUDGEMENT, NOT A FIGURE ANYONE HAS. Wants replacing with what the
+  # founding round is actually expected to bring in.
+  founding_capital: 25000        # Founding capital injection (Year 1 only)
   beq_growth_mult: 0.0           # Real growth multiplier on gifts and bequests (% p.a.)
 
   # --- Property gifts (in kind, not cash) -----------------------------------
