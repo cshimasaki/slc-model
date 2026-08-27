@@ -307,6 +307,18 @@ funding_mix:
   mix_transition_years: 30       # linear glide; a placeholder shape, not a forecast
 
 bequests_gifts:
+  # How giving is modelled.
+  #   flat   the workbook's fixed annual figure -- kept for the port reference
+  #   curve  earned by demonstrated benefit and drawn randomly, see
+  #          engine/giving.py for what the numbers are anchored to (and are not)
+  gift_mode: curve
+  gift_seed: 0                   # change to see another way the same years play out
+  gift_mature_annual: 40000      # regular giving once a track record exists (real GBP p.a.)
+  gift_ramp_homes: 25            # homes delivered at which giving reaches HALF of that
+  gift_volatility: 0.35          # year-to-year variation in regular giving
+  beq_rate_mature: 0.40          # bequests per year once established (0.4 = one every 2-3 yrs)
+  beq_mean: 60000                # average bequest (real GBP); sizes are lumpy around it
+
   gift_baseline: 40000           # Cash gifts from living donors, Gift Aid eligible (£ p.a.)
   beq_baseline: 60000            # Bequests from estates, not Gift Aid eligible (£ p.a.)
   founding_capital: 150000       # Founding capital injection, Year 1 only (£)

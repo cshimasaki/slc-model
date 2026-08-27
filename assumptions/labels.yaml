@@ -189,6 +189,34 @@ funding_mix:
 
 bequests_gifts:
   _title: "Bequests & Gifts"
+  gift_mode:
+    label: "Giving basis (flat = workbook; curve = earned and random)"
+    unit: "text"
+    row: 0
+  gift_seed:
+    label: "Random seed for the giving path"
+    unit: "integer"
+    row: 0
+  gift_mature_annual:
+    label: "Regular giving once a track record exists (real)"
+    unit: "£ p.a."
+    row: 0
+  gift_ramp_homes:
+    label: "Homes delivered at which giving reaches half its mature level"
+    unit: "properties"
+    row: 0
+  gift_volatility:
+    label: "Year-to-year variation in regular giving"
+    unit: "x"
+    row: 0
+  beq_rate_mature:
+    label: "Bequests per year once established"
+    unit: "per year"
+    row: 0
+  beq_mean:
+    label: "Average bequest (real)"
+    unit: "£"
+    row: 0
   gift_baseline:
     label: "Cash gifts from living donors (Gift Aid eligible)"
     unit: "£ p.a."

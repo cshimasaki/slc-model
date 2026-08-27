@@ -112,6 +112,12 @@ class CapitalState:
     gift_aid: list[float] = field(default_factory=_years)               # row 13
     gift_income_total: list[float] = field(default_factory=_years)      # row 14
     gift_cumulative: list[float] = field(default_factory=_years)        # row 15
+    # Giving that has to be earned. No workbook rows -- the sheet had a flat
+    # line. The two _draw lists are the run's random path, generated once so the
+    # sequence depends only on the seed.
+    gift_credibility: list[float] = field(default_factory=_years)
+    gift_regular_draw: list[float] = field(default_factory=_years)
+    gift_bequest_draw: list[float] = field(default_factory=_years)
 
     # Community shares (junior debt)
     cs_target_issuance: list[float] = field(default_factory=_years)     # row 18

@@ -31,7 +31,7 @@ normal loan in three ways:
 
 from __future__ import annotations
 
-from . import funding_mix, tontine_runoff
+from . import funding_mix, giving, tontine_runoff
 from .assumptions import Assumptions
 from .excelfns import prior
 from .macro import MacroSeries
@@ -54,10 +54,41 @@ def gifts(s: ModelState, a: Assumptions, m: MacroSeries, i: int) -> None:
     c = s.capital
     year = i + 1
 
-    # Rows 10-11: real growth on top of CPI indexation.
-    growth = (1 + a.beq_growth_mult) ** (year - 1)
-    c.gifts_living.append(a.gift_baseline * growth * m.cost_index[i])
-    c.bequests.append(a.beq_baseline * growth * m.cost_index[i])
+    # Rows 10-11.
+    #
+    #   "flat"   the workbook: a fixed annual figure with real growth on top of
+    #            CPI, regardless of whether the organisation has done anything
+    #            to deserve it. On five houses it produced GBP 110,000 a year
+    #            against GBP 34,000 of net rent.
+    #   "curve"  giving earned by demonstrated benefit -- scaled by homes
+    #            actually delivered -- and drawn randomly rather than smoothed,
+    #            because a bequest either arrives or it does not.
+    #
+    # See engine/giving.py, including what the defaults are and are not
+    # anchored to.
+    if getattr(a, "gift_mode", "flat") == "curve":
+        if not c.gift_regular_draw:
+            reg, beq = giving.draw(a, len(m.cpi_rate))
+            c.gift_regular_draw.extend(reg)
+            c.gift_bequest_draw.extend(beq)
+
+        # Homes at the START of the year: this runs before the portfolio is
+        # opened, and last year's closing is what a donor would have seen.
+        homes = prior(s.growth.portfolio_closing, i)
+        cred = giving.credibility(homes, a.gift_ramp_homes)
+        c.gift_credibility.append(cred)
+
+        regular = a.gift_mature_annual * cred * c.gift_regular_draw[i]
+        beq = giving.bequest_amount(
+            a, c.gift_bequest_draw[i], a.beq_rate_mature * cred, a.beq_mean
+        )
+        c.gifts_living.append(regular * m.cost_index[i])
+        c.bequests.append(beq * m.cost_index[i])
+    else:
+        growth = (1 + a.beq_growth_mult) ** (year - 1)
+        c.gift_credibility.append(1.0)
+        c.gifts_living.append(a.gift_baseline * growth * m.cost_index[i])
+        c.bequests.append(a.beq_baseline * growth * m.cost_index[i])
 
     # Row 12: one-off, Year 1 only.
     c.founding_capital.append(a.founding_capital if year == 1 else 0.0)
