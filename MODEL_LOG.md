@@ -1,5 +1,134 @@
 # Model log
 
+## Where this stands — 20 August 2026
+
+Read this first if you are picking the model up. Everything below is either
+unresolved or in flight; the sections after it are the decision history.
+
+### The model does not currently clear its covenants, and that is deliberate
+
+`base.yaml` carries `gift_mode: curve`. Making philanthropy something the
+organisation has to earn — scaled by homes actually delivered, drawn randomly
+rather than smoothed — removed about £5m of assumed giving over fifty years, and
+the full model no longer stands up without it:
+
+    scenario     homes   giving/50yr   senior cover   breach years
+    base            49         0.57m         -11.79             23
+    optimistic     221         1.59m          -3.38             12
+    stress           1         0.16m           ----             48
+
+Two readings, and the choice has NOT been made:
+
+* Growth to 185 homes was never fundable on philanthropy and needs grant or
+  foundation capital — which is what the foundation deck argues, so this
+  strengthens that case rather than undermining it.
+* The credibility ramp (`gift_ramp_homes: 25`) is too steep and understates what
+  a young organisation attracts.
+
+The ramp has not been tuned to rescue the answer. Deciding this is the first
+substantive job, and it should be decided on evidence about what comparable
+organisations actually receive — see below.
+
+### The five-house case, which does stand up
+
+Built at a reviewer's request: the fifty-year model is too complex to see the
+drivers, and the scale of the later years hides the risk in the early ones. Both
+fair. `analysis/five_properties.py` runs the same engine on five houses.
+
+    spent years 1-3   £1,408,634
+    raised            £1,242,006   (shares 50% of it)
+    gap               £  166,628
+    lowest cash       £ -147,160 in year 3, positive from year 15
+    rent covers interest from year 4; five deficit years in fifty
+    cash at year 50   £1,016,865 real, five homes, no debt left
+
+**£166,628 of ramp capital buys five permanently affordable homes that are
+self-supporting from year four and debt-free by year fifty.** That is a more
+fundable proposition, and a more checkable one, than any fifty-year projection.
+
+Whether the gap is grant, bridge, or a larger founding raise is undecided, and
+the model treats it as raw negative cash because no bridging instrument exists in
+it. Those have very different consequences.
+
+### Numbers that are judgement and want replacing
+
+Each says so where it lives; listed together because each moves the answer.
+
+* **Retrofit** £12,000 base / £18,000 stress. An external review put Cotswold
+  solid-wall retrofit at £25,000–£35,000. Testing that range: at £25,000 Stress
+  breaks; at £35,000 the coupon ceiling falls to 3.19%, below the 4.58% an
+  investor needs. **This is the single assumption most able to reopen the
+  pricing gap.** A real quote on a representative terrace is the highest-value
+  piece of evidence anyone could bring.
+* **Corporate cost.** A flat figure from the workbook, wrong at both ends: £237
+  per house at 185 homes, and 58% of gross rent at five. Housing Commons manages
+  and maintains the homes out of the 16.67% of rent, so this line is only
+  accounting, financial management, governance, the FCA return, insurance and
+  fund oversight — it is NOT housing management. Wants a build-up by function
+  against portfolio size. `--corporate` steers it meanwhile.
+* **Founding capital** £25,000, reduced from £150,000 when it became clear the
+  old figure was doing the share offer's job.
+* **Giving levels** — `gift_mature_annual` and `beq_mean`. See below.
+
+### Evidence nobody has gathered yet
+
+A search failed to produce per-organisation philanthropic income for a small
+housing-owning CLT. What it did establish is where to look:
+
+* Most CLTs are Community Benefit Societies on the **FCA Mutuals Public
+  Register**, not Companies House — Bristol CLT is 31423R. Only CLTs structured
+  as companies (CLG/CIC) file at Companies House; only registered charities give
+  a donations breakdown, at the Charity Commission.
+* National CLT Network: £459,036 total income to March 2025, £242,458 of it
+  grant funding — but that is the national body, not a landlord.
+* Homes England allocated £137m across 175 community-led schemes in 2021–26,
+  roughly £783,000 a scheme. Development grant, not philanthropy.
+* Where charities publish it, legacies commonly dominate voluntary income.
+
+Getting a real figure means pulling individual accounts one organisation at a
+time. Until somebody does, the giving defaults are shape-without-substance.
+
+### Outputs that are now overstated
+
+The published foundation deck and the reviewer note in `docs/` both quote
+flat-gift figures — 185 homes, all scenarios clearing. Neither is true under the
+current assumptions. Both need revisiting before they go anywhere.
+
+`dist/` holds two stale base workbooks that were locked open in Excel and could
+not be overwritten.
+
+### Branches
+
+Everything since the port sits on `structure/real-costs-and-indexation`. Four
+earlier branches are also unmerged: `model-update-august-2026`,
+`pricing/investor-rate-4.25`, `structure/funding-mix`, `structure/property-gifts`.
+`main` still carries the old configuration, so anyone cloning the repo gets a
+model several months behind. Merging is overdue.
+
+### Designed but not built
+
+* **Gear to income, not to value.** `pf_ltv_limit` is a value test while the
+  covenant is a rent test; when house prices outrun rents, a constant-LTV policy
+  drives cover toward zero mechanically. Replacing it with `charge ≤ net rent ÷
+  (target cover × coupon)` makes cover constant by construction and is what an
+  open-ended investment phase would need. Derived, never implemented.
+* **Withdrawal clustering.** Modelled as a smooth 2% a year, which cannot
+  express withdrawals concentrating in a bad year — precisely when they hurt.
+  An explicit stress spike, parameterised like the HPI shock, is the cheaper of
+  the two candidate approaches and answers the question directly.
+* **Tontine syndication.** An external review proposed a multi-commons master
+  vehicle issuing charges across several regional commons with local
+  ring-fencing, to get past the ~£20m below which a regulated annuity fund is
+  uneconomic. Note it heads toward the £50m technical-provisions NDF threshold
+  under PS2/24, where the regulatory character changes.
+* **Longevity sensitivity as a standing script.** The September actuarial
+  dataset replaces `assumptions/tontine_runoff.csv`. At current Tontine scale
+  (~£3.5m) shifting median survival from 87 to 92 costs two basis points of
+  coupon ceiling — immaterial. At the scale syndication proposes it adds 52% to
+  the outstanding charge. The exposure arrives with the scale.
+
+---
+
 A decision log for **structural** experiments — changes to how the model
 *works*, not what it's fed. Parameter changes belong in `assumptions/`; they
 don't need an entry here.
@@ -760,74 +889,6 @@ sheet, since a flat cash tolerance refused to run above roughly GBP 500m. Dead
 `_fund_year` removed.
 
 ---
-
-## Planned — not yet started
-
-Recorded 2026-08-07 from the design discussion, so the sequence is not lost.
-
-### The capital-mix transition (highest priority)
-
-Tontine is the booster rocket: it buys escape velocity, and should decline as a
-share of funding once the balance sheet and the evidence base can carry
-**community shares** (widely understood) and **Rent Credit Obligations**
-(novel). The model currently has no notion of this shift at all — each capital
-layer has fixed parameters and no trajectory.
-
-Needs: capital-layer weights that vary over time, with Base / Optimistic /
-Stress differing in *how fast* the transition happens, not just in levels. The
-LTV limit becomes part of that trajectory rather than a constant — high while
-Tontine-led, falling as equity-like capital takes over.
-
-### Rent Credit Obligations
-
-An owner of an unencumbered property transfers it to the commons, retains
-lifetime occupancy with maintenance provided, and receives an RCO that passes
-to their children on death.
-
-This is not a variant of an existing layer. It is capital contributed **in
-kind**, with a retained life interest, and an instrument that is inheritable
-and denominated in rent. Modelling it needs decisions this log cannot make:
-how the RCO is valued at issue, whether the property yields rent during the
-donor's lifetime, whether the RCO is a liability or equity, and how the
-inherited credit is extinguished. Questions raised with the design team
-2026-08-07.
-
-### Community share withdrawals are unrealistically smooth
-
-The mechanic is: withdrawals in year t = a fixed rate applied to the closing
-balance from `cs_withdrawal_years` ago. Because issuance is smooth, withdrawals
-come out as a smooth lagged echo of it — a clean curve where reality would be
-lumpy.
-
-Real withdrawals are driven by individual circumstances and are likely to
-*cluster*: after a life event, when confidence dips, or when a dividend is cut.
-The clustering is the part that matters, because withdrawals concentrating in a
-bad year is precisely when the Commons can least afford them, and the current
-mechanic cannot express that at all.
-
-Two candidate structural changes, neither yet attempted:
-
-- **Behavioural feedback.** Let the withdrawal rate respond to something the
-  model already knows — a dividend paid short of the declared rate is the
-  obvious trigger. Keeps the model deterministic and reproducible, which the
-  validation depends on.
-- **Explicit stress event.** A one-off withdrawal spike in a nominated year,
-  parameterised like the HPI shock, to size the liquidity risk directly.
-
-The second is probably more useful first: it answers "what if a fifth of
-withdrawable shares were called in the year after a bad result?" without
-pretending to predict when.
-
-Note the restriction period itself was wrong (5 years in the workbook, 2 in the
-actual offer terms) and is corrected in `base.yaml`.
-
-### The leverage multiplier as a published figure
-
-"£20k of community shares releases £80k of pension capital" is a fundraising
-message that falls straight out of the LTV relationship. Cheap to compute and
-publish in the explorer — for each £1 of community share, how much total
-capital is deployed. Worth doing once the transition work above settles what
-LTV is doing over time.
 
 <!--
 Template:
